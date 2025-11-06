@@ -1,0 +1,106 @@
+[package]
+name = "misa-cloud-backend"
+version = "0.1.0"
+description = "MISA.AI Cloud Backend Services"
+authors = ["MISA.AI Team"]
+license = "MIT"
+repository = "https://github.com/misa-ai/cloud-backend"
+edition = "2021"
+rust-version = "1.70"
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["macros", "multipart", "headers"] }
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "compression", "limit"] }
+hyper = { version = "1.0", features = ["full"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
+redis = { version = "0.24", features = ["tokio-comp"] }
+
+# Authentication & Security
+jsonwebtoken = "9.2"
+ring = "0.17"
+argon2 = "0.5"
+bcrypt = "0.15"
+
+# File storage
+aws-sdk-s3 = "1.0"
+aws-config = "1.0"
+cloud-storage = "0.1"
+
+# Email
+lettre = "0.11"
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "stream"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Configuration
+config = "0.13"
+dotenvy = "0.15"
+
+# Metrics & Monitoring
+prometheus = "0.13"
+metrics = "0.22"
+metrics-exporter-prometheus = "0.13"
+
+# WebSocket
+tokio-tungstenite = "0.20"
+futures-util = "0.3"
+
+# Image processing
+image = "0.24"
+
+# PDF processing
+pdf-extract = "0.7"
+
+# Background jobs
+tokio-cron-scheduler = "0.10"
+background-jobs = "0.14"
+
+# Rate limiting
+governor = "0.6"
+
+# Caching
+moka = { version = "0.12", features = ["future"] }
+
+# Validation
+validator = { version = "0.16", features = ["derive"] }
+
+# Environment variables
+dotenvy = "0.15"
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3.8"
+mockall = "0.12"
+wiremock = "0.5"
+
+[[bin]]
+name = "misa-cloud-backend"
+path = "src/main.rs"
+
+[lib]
+name = "misa_cloud_backend"
+path = "src/lib.rs"
