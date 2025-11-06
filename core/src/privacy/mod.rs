@@ -923,12 +923,198 @@ impl ConsentManager {
 
 impl DataControls {
     pub async fn new() -> MisaResult<Self> {
-        Ok(Self {
+        let mut controls = Self {
             source_controls: Arc::new(RwLock::new(HashMap::new())),
             app_permissions: Arc::new(RwLock::new(HashMap::new())),
             data_retention: Arc::new(RwLock::new(DataRetentionPolicy::default())),
             privacy_filters: Arc::new(RwLock::new(HashMap::new())),
-        })
+        };
+
+        // Initialize default data source controls
+        controls.initialize_default_sources().await?;
+        controls.initialize_default_filters().await?;
+
+        Ok(controls)
+    }
+
+    /// Initialize default data source controls
+    async fn initialize_default_sources(&mut self) -> MisaResult<()> {
+        let sources = vec![
+            DataSourceControl {
+                source_id: "microphone".to_string(),
+                source_type: DataSourceType::Microphone,
+                name: "Microphone Access".to_string(),
+                enabled: false,
+                permission_required: true,
+                data_types: vec![DataType::AudioData],
+                access_frequency: AccessFrequency::OnDemand,
+                retention_policy: Some(RetentionRule {
+                    max_age_days: 30,
+                    max_size_mb: 100,
+                    auto_delete: true,
+                    archival_policy: ArchivalPolicy::Delete,
+                }),
+                encryption_required: true,
+                anonymization_required: false,
+                user_control_level: UserControlLevel::Toggle,
+            },
+            DataSourceControl {
+                source_id: "camera".to_string(),
+                source_type: DataSourceType::Camera,
+                name: "Camera Access".to_string(),
+                enabled: false,
+                permission_required: true,
+                data_types: vec![DataType::VideoData],
+                access_frequency: AccessFrequency::OnDemand,
+                retention_policy: Some(RetentionRule {
+                    max_age_days: 7,
+                    max_size_mb: 500,
+                    auto_delete: true,
+                    archival_policy: ArchivalPolicy::Delete,
+                }),
+                encryption_required: true,
+                anonymization_required: false,
+                user_control_level: UserControlLevel::Toggle,
+            },
+            DataSourceControl {
+                source_id: "location".to_string(),
+                source_type: DataSourceType::Location,
+                name: "Location Services".to_string(),
+                enabled: false,
+                permission_required: true,
+                data_types: vec![DataType::LocationData],
+                access_frequency: AccessFrequency::Periodic { interval_minutes: 15 },
+                retention_policy: Some(RetentionRule {
+                    max_age_days: 90,
+                    max_size_mb: 10,
+                    auto_delete: true,
+                    archival_policy: ArchivalPolicy::AnonymizeAndRetain,
+                }),
+                encryption_required: true,
+                anonymization_required: true,
+                user_control_level: UserControlLevel::Granular,
+            },
+            DataSourceControl {
+                source_id: "screen_capture".to_string(),
+                source_type: DataSourceType::ScreenCapture,
+                name: "Screen Capture".to_string(),
+                enabled: false,
+                permission_required: true,
+                data_types: vec![DataType::VideoData, DataType::TextData],
+                access_frequency: AccessFrequency::OnDemand,
+                retention_policy: Some(RetentionRule {
+                    max_age_days: 1,
+                    max_size_mb: 1000,
+                    auto_delete: true,
+                    archival_policy: ArchivalPolicy::Delete,
+                }),
+                encryption_required: true,
+                anonymization_required: true,
+                user_control_level: UserControlLevel::Configurable,
+            },
+            DataSourceControl {
+                source_id: "app_usage".to_string(),
+                source_type: DataSourceType::ApplicationUsage,
+                name: "Application Usage Monitoring".to_string(),
+                enabled: false,
+                permission_required: true,
+                data_types: vec![DataType::UsageData],
+                access_frequency: AccessFrequency::Continuous,
+                retention_policy: Some(RetentionRule {
+                    max_age_days: 365,
+                    max_size_mb: 50,
+                    auto_delete: true,
+                    archival_policy: ArchivalPolicy::Compress,
+                }),
+                encryption_required: true,
+                anonymization_required: true,
+                user_control_level: UserControlLevel::Customizable,
+            },
+        ];
+
+        let mut source_controls = self.source_controls.write().await;
+        for source in sources {
+            source_controls.insert(source.source_id.clone(), source);
+        }
+
+        info!("Initialized {} default data source controls", source_controls.len());
+        Ok(())
+    }
+
+    /// Initialize default privacy filters
+    async fn initialize_default_filters(&mut self) -> MisaResult<()> {
+        let filters = vec![
+            PrivacyFilter {
+                filter_id: "pii_redaction".to_string(),
+                name: "PII Redaction".to_string(),
+                description: "Redact personally identifiable information from data".to_string(),
+                filter_type: FilterType::Redaction,
+                rules: vec![
+                    FilterRule {
+                        rule_id: "email_redaction".to_string(),
+                        condition: r#"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"#.to_string(),
+                        action: FilterAction::Redact {
+                            pattern: r#"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"#.to_string(),
+                            replacement: "[EMAIL]".to_string(),
+                        },
+                        parameters: serde_json::json!({"case_sensitive": false}),
+                    },
+                    FilterRule {
+                        rule_id: "phone_redaction".to_string(),
+                        condition: r#"\b\d{3}-\d{3}-\d{4}\b"#.to_string(),
+                        action: FilterAction::Redact {
+                            pattern: r#"\b\d{3}-\d{3}-\d{4}\b"#.to_string(),
+                            replacement: "[PHONE]".to_string(),
+                        },
+                        parameters: serde_json::json!({"case_sensitive": false}),
+                    },
+                ],
+                enabled: true,
+                priority: 10,
+            },
+            PrivacyFilter {
+                filter_id: "profanity_filter".to_string(),
+                name: "Profanity Filter".to_string(),
+                description: "Filter inappropriate language".to_string(),
+                filter_type: FilterType::ContentFilter,
+                rules: vec![
+                    FilterRule {
+                        rule_id: "profanity_block".to_string(),
+                        condition: "contains_profanity".to_string(),
+                        action: FilterAction::Block,
+                        parameters: serde_json::json!({"strictness": "medium"}),
+                    },
+                ],
+                enabled: false,
+                priority: 5,
+            },
+            PrivacyFilter {
+                filter_id: "location_anonymization".to_string(),
+                name: "Location Anonymization".to_string(),
+                description: "Generalize location data to protect privacy".to_string(),
+                filter_type: FilterType::Anonymization,
+                rules: vec![
+                    FilterRule {
+                        rule_id: "geo_generalization".to_string(),
+                        condition: "precision_high".to_string(),
+                        action: FilterAction::Anonymize {
+                            method: AnonymizationMethod::Generalize,
+                        },
+                        parameters: serde_json::json!({"precision": "city_level"}),
+                    },
+                ],
+                enabled: true,
+                priority: 8,
+            },
+        ];
+
+        let mut privacy_filters = self.privacy_filters.write().await;
+        for filter in filters {
+            privacy_filters.insert(filter.filter_id.clone(), filter);
+        }
+
+        info!("Initialized {} default privacy filters", privacy_filters.len());
+        Ok(())
     }
 
     pub async fn set_source_control(&self, source_id: &str, enabled: bool) -> MisaResult<()> {
