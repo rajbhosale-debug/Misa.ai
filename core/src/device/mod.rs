@@ -747,11 +747,96 @@ impl DiscoveryService {
 
         info!("Starting discovery service on port {}", self.discovery_port);
 
-        // In real implementation, this would:
-        // - Start UDP discovery service
-        // - Broadcast device information
-        // - Listen for discovery broadcasts
-        // - Handle pairing requests
+        // Start UDP discovery service
+        let udp_socket = tokio::net::UdpSocket::bind(("0.0.0.0", self.discovery_port))
+            .await
+            .map_err(|e| MisaError::Network(format!("Failed to bind UDP socket: {}", e)))?;
+
+        let active_discovery = Arc::clone(&self.active_discovery);
+        let broadcast_interval = self.broadcast_interval_seconds;
+
+        // Spawn discovery broadcaster
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(broadcast_interval));
+            let socket = Arc::new(udp_socket);
+
+            loop {
+                interval.tick().await;
+                if let Err(e) = Self::broadcast_device_info(&socket).await {
+                    warn!("Failed to broadcast device info: {}", e);
+                }
+            }
+        });
+
+        // Spawn discovery listener
+        let active_discovery_listener = Arc::clone(&self.active_discovery);
+        let listener_socket = tokio::net::UdpSocket::bind(("0.0.0.0", self.discovery_port + 1))
+            .await
+            .map_err(|e| MisaError::Network(format!("Failed to bind listener socket: {}", e)))?;
+
+        tokio::spawn(async move {
+            let mut buf = [0u8; 1024];
+            loop {
+                match listener_socket.recv_from(&mut buf).await {
+                    Ok((len, addr)) => {
+                        let data = &buf[..len];
+                        if let Err(e) = Self::handle_discovery_packet(data, addr, &active_discovery_listener).await {
+                            warn!("Failed to handle discovery packet: {}", e);
+                        }
+                    }
+                    Err(e) => warn!("Discovery listener error: {}", e),
+                }
+            }
+        });
+
+        info!("Discovery service started successfully");
+        Ok(())
+    }
+
+    async fn broadcast_device_info(socket: &Arc<tokio::net::UdpSocket>) -> MisaResult<()> {
+        let device_info = DeviceDiscoveryPacket {
+            device_id: "local-device".to_string(), // Would get from config
+            device_name: "Misa Device".to_string(),
+            device_type: "Desktop".to_string(),
+            capabilities: vec!["gpu".to_string(), "vision".to_string(), "audio".to_string()],
+            port: 8080,
+            timestamp: chrono::Utc::now(),
+        };
+
+        let packet_data = serde_json::to_vec(&device_info)
+            .map_err(|e| MisaError::Serialization(e))?;
+
+        // Broadcast to local network
+        let broadcast_addr = "255.255.255.255:8081";
+        match socket.send_to(&packet_data, broadcast_addr).await {
+            Ok(_) => debug!("Broadcast device discovery packet"),
+            Err(e) => warn!("Failed to broadcast discovery packet: {}", e),
+        }
+
+        Ok(())
+    }
+
+    async fn handle_discovery_packet(
+        data: &[u8],
+        addr: std::net::SocketAddr,
+        active_discovery: &Arc<RwLock<HashMap<String, DiscoverySession>>>,
+    ) -> MisaResult<()> {
+        let packet: DeviceDiscoveryPacket = serde_json::from_slice(data)
+            .map_err(|_| MisaError::Device("Invalid discovery packet".to_string()))?;
+
+        debug!("Received discovery packet from {}: {}", addr, packet.device_id);
+
+        // Create discovery session
+        let session = DiscoverySession {
+            session_id: uuid::Uuid::new_v4().to_string(),
+            device_id: packet.device_id.clone(),
+            started_at: chrono::Utc::now(),
+            qr_token: format!("misa://pair/{}/{}", packet.device_id, chrono::Utc::now().timestamp()),
+            pairing_status: PairingStatus::PendingConfirmation,
+        };
+
+        let mut sessions = active_discovery.write().await;
+        sessions.insert(packet.device_id.clone(), session);
 
         Ok(())
     }
