@@ -1,0 +1,97 @@
+[package]
+name = "misa-desktop"
+version = "0.1.0"
+description = "MISA.AI Desktop Application"
+authors = ["MISA.AI Team"]
+license = "MIT"
+repository = "https://github.com/misa-ai/desktop"
+edition = "2021"
+rust-version = "1.70"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.5", features = [
+  "api-all",
+  "macos-private-api",
+  "protocol-asset",
+  "system-tray",
+  "updater"
+] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+thiserror = "1.0"
+log = "0.4"
+env_logger = "0.10"
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+once_cell = "1.19"
+parking_lot = "0.12"
+dashmap = "5.5"
+crossbeam-channel = "0.5"
+
+# HTTP and networking
+reqwest = { version = "0.11", features = ["json", "stream"] }
+tokio-tungstenite = "0.20"
+url = "2.4"
+
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+
+# File system
+notify = "6.1"
+walkdir = "2.4"
+
+# Cryptography
+ring = "0.17"
+base64 = "0.21"
+
+# Image processing
+image = "0.24"
+resvg = "0.37"
+tiny-skia = "0.11"
+
+# System integration
+windows-sys = { version = "0.48", features = ["Win32_UI_WindowsAndMessaging"], optional = true }
+cocoa = { version = "0.25", optional = true }
+objc = { version = "0.2", optional = true }
+core-foundation = { version = "0.9", optional = true }
+core-graphics = { version = "0.23", optional = true }
+
+# Machine Learning (optional)
+ort = { version = "1.16", optional = true }
+ndarray = { version = "0.15", optional = true }
+
+# Audio processing
+rodio = { version = "0.17", optional = true }
+
+# PDF processing
+pdf-extract = "0.7"
+
+# Configuration
+config = "0.13"
+clap = { version = "4.4", features = ["derive"] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+windows = ["windows-sys", "dep:windows"]
+macos = ["cocoa", "objc", "core-foundation", "core-graphics"]
+ml = ["ort", "ndarray"]
+audio = ["rodio"]
+all-platforms = ["windows", "macos"]
+
+[[bin]]
+name = "misa-desktop"
+path = "src/main.rs"
+
+[lib]
+name = "misa_desktop_lib"
+path = "src/lib.rs"
+
+[[test]]
+name = "integration_tests"
+path = "tests/integration_tests.rs"
