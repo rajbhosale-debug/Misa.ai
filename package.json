@@ -1,0 +1,72 @@
+{
+  "name": "misa-ai",
+  "version": "0.1.0",
+  "description": "MISA.AI - Hybrid local/cloud intelligent assistant platform",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "web",
+    "plugins/sdk/ts",
+    "android",
+    "desktop"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "clean": "npm run clean --workspaces && rm -rf node_modules",
+    "build:core": "cd core && cargo build --release",
+    "dev:core": "cd core && cargo run",
+    "test:core": "cd core && cargo test",
+    "setup": "npm install && cd core && cargo build && npm run build --workspaces",
+    "docker:build": "docker-compose -f infrastructure/docker/docker-compose.yml build",
+    "docker:run": "docker-compose -f infrastructure/docker/docker-compose.yml up",
+    "infrastructure:deploy": "cd infrastructure && kubectl apply -f kubernetes/",
+    "security:audit": "npm audit && cd core && cargo audit"
+  },
+  "keywords": [
+    "ai",
+    "assistant",
+    "privacy",
+    "local",
+    "hybrid",
+    "misa",
+    "rust",
+    "typescript"
+  ],
+  "author": "MISA.AI Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/misa-ai/misa.ai.git"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.0",
+    "concurrently": "^8.2.2",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.0.2",
+    "prettier": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "pre-push": "npm run typecheck && npm run test"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{rs,toml}": [
+      "cd core && cargo fmt",
+      "cd core && cargo clippy --fix"
+    ]
+  }
+}
