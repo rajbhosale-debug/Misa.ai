@@ -1,0 +1,347 @@
+# MISA.AI Default Configuration
+# Privacy-First Intelligent Assistant Platform
+# This file contains smart defaults optimized for most users
+
+# =============================================================================
+# NETWORK CONFIGURATION
+# =============================================================================
+[network]
+# WebSocket server for real-time communication
+websocket_port = 8080
+bind_address = "0.0.0.0"
+
+# gRPC server for high-performance API calls
+grpc_port = 50051
+
+# TLS/SSL configuration (recommended for production)
+tls_enabled = false
+tls_cert_path = ""
+tls_key_path = ""
+
+# CORS settings for web application
+cors_enabled = true
+cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+# =============================================================================
+# AI MODEL CONFIGURATION
+# =============================================================================
+[models]
+# Default model to use for general tasks
+default_model = "mixtral"
+
+# Local Ollama server configuration
+local_server_url = "http://localhost:11434"
+local_models = ["mixtral", "codellama", "wizardcoder", "dolphin-mistral"]
+
+# Model switching preferences
+switching_preferences.prefer_local = true
+switching_preferences.gpu_acceleration = true
+switching_preferences.memory_limit_gb = 8
+
+# Auto-download missing models (set to false for privacy)
+auto_download_models = false
+model_cache_size_gb = 10
+
+# Cloud model configuration (optional, requires API keys)
+[models.cloud]
+enabled = false
+providers = ["openai", "anthropic", "google"]
+fallback_enabled = false
+
+# OpenAI configuration
+[models.cloud.openai]
+api_key = ""
+models = ["gpt-4", "gpt-3.5-turbo"]
+base_url = "https://api.openai.com/v1"
+
+# Anthropic configuration
+[models.cloud.anthropic]
+api_key = ""
+models = ["claude-3-opus", "claude-3-sonnet"]
+base_url = "https://api.anthropic.com"
+
+# Google AI configuration
+[models.cloud.google]
+api_key = ""
+models = ["gemini-pro"]
+base_url = "https://generativelanguage.googleapis.com/v1"
+
+# =============================================================================
+# DEVICE MANAGEMENT
+# =============================================================================
+[devices]
+# Device discovery and pairing
+discovery_enabled = true
+discovery_port = 8081
+max_devices = 5
+
+# Remote desktop capabilities
+remote_desktop_enabled = true
+remote_desktop_port = 5900
+require_approval = true
+session_recording = false
+
+# File transfer settings
+file_transfer_enabled = true
+max_file_size_mb = 100
+auto_sync_enabled = false
+
+# Energy management
+energy_saver_mode = true
+battery_threshold_percent = 20
+gpu_preferred_on_ac = true
+
+# =============================================================================
+# SECURITY & PRIVACY
+# =============================================================================
+[security]
+# Authentication settings
+auth_required = true
+session_timeout_minutes = 30
+max_failed_attempts = 5
+lockout_duration_minutes = 5
+
+# Biometric authentication
+biometric_enabled = true
+face_recognition = true
+fingerprint = true
+voice_authentication = false
+
+# Plugin security
+plugin_sandboxing = true
+resource_limits.cpu_percent = 50
+resource_limits.memory_mb = 1024
+resource_limits.network_rate_mbps = 10
+
+# Audit logging
+audit_logging = true
+log_retention_days = 30
+log_encryption = true
+
+# =============================================================================
+# PRIVACY CONTROLS
+# =============================================================================
+[privacy]
+# Data collection settings (privacy-first defaults)
+data_collection = false
+crash_reports = false
+usage_analytics = false
+performance_metrics = false
+
+# Local processing preferences
+local_only_processing = true
+cloud_fallback_ask_user = true
+data_minimization = true
+
+# Memory and storage privacy
+memory_encryption = true
+auto_delete_sensitive_data = true
+sensitive_data_retention_days = 7
+
+# Telemetry opt-out
+telemetry_opt_out = true
+phone_home_disabled = true
+
+# =============================================================================
+# MEMORY & KNOWLEDGE
+# =============================================================================
+[memory]
+# Local database configuration
+local_db_path = "data/misa_memory.db"
+backup_enabled = true
+backup_interval_hours = 24
+max_backups = 7
+
+# Memory retention policies
+retention_days = 365
+conversation_retention_days = 90
+document_retention_days = -1  # Keep forever
+
+# Encryption settings
+encryption_enabled = true
+encryption_algorithm = "AES-256-GCM"
+key_derivation = "PBKDF2"
+
+# Memory schemas
+short_term_memory_hours = 24
+medium_term_memory_days = 90
+long_term_memory_years = 5
+
+# =============================================================================
+# USER INTERFACE & EXPERIENCE
+# =============================================================================
+[ui]
+# Theme and appearance
+theme = "auto"  # auto, light, dark
+avatar_enabled = true
+avatar_style = "cute"
+animations_enabled = true
+
+# Voice interaction
+voice_wake_word = "hey misa"
+voice_continuous_listening = false
+voice_confidence_threshold = 0.8
+
+# Notification settings
+notifications_enabled = true
+sound_enabled = true
+desktop_notifications = true
+quiet_hours_start = "22:00"
+quiet_hours_end = "08:00"
+
+# Accessibility
+font_size = "medium"  # small, medium, large, extra-large
+high_contrast = false
+screen_reader_support = true
+
+# =============================================================================
+# APPLICATION SETTINGS
+# =============================================================================
+# Calendar application
+[apps.calendar]
+sync_enabled = false
+default_calendar_provider = "local"
+ocr_import_enabled = true
+meeting_reminders_minutes = [15, 5]
+auto_schedule_suggestions = true
+
+# Notes application
+[apps.notes]
+auto_save_enabled = true
+sync_enabled = false
+ocr_enabled = true
+voice_recognition = true
+handwriting_recognition = false
+
+# Task management
+[apps.tasks]
+auto_categorization = true
+priority_suggestions = true
+deadline_reminders = true
+subtask_generation = true
+
+# File management
+[apps.filehub]
+auto_indexing = false
+search_enabled = true
+thumbnail_generation = true
+document_preview = true
+
+# Focus and productivity
+[apps.focus]
+default_session_minutes = 25
+break_duration_minutes = 5
+daily_goal_sessions = 8
+distraction_blocking = false
+
+# =============================================================================
+# INTEGRATION SETTINGS
+# =============================================================================
+[integrations]
+# Google services (disabled by default for privacy)
+[integrations.google]
+enabled = false
+calendar_sync = false
+drive_sync = false
+gmail_integration = false
+
+# Microsoft services (disabled by default for privacy)
+[integrations.microsoft]
+enabled = false
+outlook_calendar = false
+onedrive_sync = false
+teams_integration = false
+
+# IoT and smart home
+[integrations.iot]
+enabled = false
+home_assistant_url = ""
+mqtt_broker = ""
+auto_discovery = false
+
+# Browser integration
+[integrations.browser]
+enabled = false
+extension_install = false
+page_summarization = false
+bookmark_sync = false
+
+# =============================================================================
+# PERFORMANCE & OPTIMIZATION
+# =============================================================================
+[performance]
+# Resource management
+max_cpu_cores = 4
+max_memory_gb = 8
+gpu_acceleration = true
+parallel_processing = true
+
+# Caching settings
+enable_model_cache = true
+cache_directory = "cache"
+max_cache_size_gb = 5
+cache_ttl_hours = 24
+
+# Background processing
+background_tasks_enabled = true
+max_concurrent_tasks = 3
+task_timeout_minutes = 30
+
+# =============================================================================
+# LOGGING & DEBUGGING
+# =============================================================================
+[logging]
+# Log levels: trace, debug, info, warn, error
+default_level = "info"
+kernel_level = "info"
+models_level = "warn"
+security_level = "info"
+
+# Log destinations
+console_logging = true
+file_logging = true
+file_path = "logs/misa.log"
+max_log_size_mb = 100
+max_log_files = 5
+
+# Debug settings (disable for production)
+debug_mode = false
+trace_requests = false
+profiling_enabled = false
+
+# =============================================================================
+# UPDATES & MAINTENANCE
+# =============================================================================
+[updates]
+# Automatic updates
+auto_check_enabled = true
+auto_download_enabled = false
+auto_install_enabled = false
+check_interval_hours = 24
+
+# Update channels
+channel = "stable"  # stable, beta, alpha
+include_prereleases = false
+
+# Backup before update
+backup_before_update = true
+rollback_enabled = true
+
+# =============================================================================
+# EXPERIMENTAL FEATURES
+# =============================================================================
+[experimental]
+# Enable at your own risk
+features_enabled = []
+beta_features = false
+alpha_features = false
+
+# Advanced AI capabilities
+advanced_reasoning = false
+multimodal_processing = false
+context_window_expansion = false
+
+# Performance experiments
+quantized_models = false
+model_streaming = false
+parallel_inference = false
