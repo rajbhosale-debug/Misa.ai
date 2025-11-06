@@ -875,33 +875,130 @@ show_success() {
     echo -e "${GREEN}✨ Welcome to MISA.AI - Your Privacy-First AI Assistant!${NC}"
 }
 
-# Main installation flow
+# Enhanced installation flow with mobile coordination
 main() {
     print_banner
 
-    print_info "Starting MISA.AI installation..."
+    print_info "Starting MISA.AI unified installation..."
     echo ""
 
-    # Check prerequisites
-    check_root
-    detect_platform
-    check_docker
-    check_docker_compose
+    # Check for interrupted installation
+    if resume_after_restart; then
+        print_info "Continuing interrupted installation..."
+    else
+        # Check prerequisites
+        check_root
+        detect_platform
+        check_docker
+        check_docker_compose
+
+        # Handle Windows-specific coordination
+        handle_windows_restarts
+    fi
+
+    # Save installation state
+    save_install_state "directory_creation"
 
     # Installation steps
     create_install_dir
+    save_install_state "download"
+
     download_distribution
+    save_install_state "config"
+
     create_config
     create_docker_compose
     create_env_file
+    save_install_state "docker_setup"
+
     pull_images
+    save_install_state "services"
+
     start_services
+
+    # Start mobile coordination server
+    if [ "$MOBILE_COORDINATION_ENABLED" = true ]; then
+        start_coordination_server
+    fi
+
     wait_for_services
+    save_install_state "models"
+
     download_model
     create_management_scripts
 
+    # Mobile device discovery and coordination
+    if [ "$MOBILE_COORDINATION_ENABLED" = true ]; then
+        coordinate_mobile_installation
+    fi
+
+    # Clean up installation state
+    rm -f "$INSTALL_DIR/.install_state"
+
     # Success
     show_success
+}
+
+# Coordinate mobile installation
+coordinate_mobile_installation() {
+    print_info "Setting up mobile device coordination..."
+
+    # Check for discovered devices
+    local discovered_devices
+    if discovered_devices=$(discover_android_devices); then
+        print_success "Mobile coordination available!"
+        echo ""
+
+        # Generate QR code for pairing
+        local pairing_url=$(generate_pairing_qr)
+
+        echo ""
+        print_info "Discovered Android devices:"
+        local device_index=0
+        echo "$discovered_devices" | while read -r device; do
+            echo "  [$((++device_index))] $device"
+        done
+
+        echo ""
+        read -p "Select device to install MISA.AI (enter number, or 0 to skip): " -n 1 -r
+        echo
+
+        if [[ $REPLY =~ ^[1-9][0-9]*$ ]]; then
+            local selected_device=$(echo "$discovered_devices" | sed -n "${REPLY}p")
+            if [ -n "$selected_device" ]; then
+                print_info "Initiating installation on: $selected_device"
+                if orchestrate_mobile_install "$selected_device" "$pairing_url"; then
+                    print_success "Mobile installation initiated successfully!"
+                    print_info "Please complete the installation on your Android device."
+                else
+                    print_warning "Mobile installation failed. You can install manually from the app store."
+                fi
+            fi
+        else
+            print_info "Skipping mobile installation."
+        fi
+
+        # Show QR code for manual pairing
+        if [ "$QR_CODE_ENABLED" = true ]; then
+            echo ""
+            print_info "QR code generated for mobile pairing:"
+            echo "Pairing URL: $pairing_url"
+            echo "Scan this code with your MISA.AI mobile app to pair devices."
+        fi
+    else
+        print_info "No Android devices found for mobile coordination."
+        print_info "You can still pair devices manually after installation."
+
+        # Generate QR code anyway for manual pairing
+        if [ "$QR_CODE_ENABLED" = true ]; then
+            read -p "Would you like to generate a QR code for manual pairing? (y/N): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                local pairing_url=$(generate_pairing_qr)
+                echo "Pairing URL: $pairing_url"
+            fi
+        fi
+    fi
 }
 
 # Handle script arguments
