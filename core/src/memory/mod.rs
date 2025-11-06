@@ -969,6 +969,206 @@ impl MemorySchemas {
             summarization_enabled: true,
         }
     }
+
+    /// Determine if memory should be compressed/summarized
+    pub fn should_compress(&self, memory: &MemoryItem) -> bool {
+        match memory.memory_type {
+            MemoryType::ShortTerm => {
+                // Compress short-term memories if capacity exceeded
+                false // Would check current count
+            }
+            MemoryType::MediumTerm => {
+                // Compress medium-term memories older than threshold
+                memory.created_at.signed_duration_since(chrono::Utc::now()).num_days() > (self.medium_term_retention_days / 2) as i64
+            }
+            MemoryType::LongTerm => {
+                // Compress long-term memories with low relevance
+                memory.importance == Importance::Low && memory.access_count < 5
+            }
+            MemoryType::Permanent => {
+                false // Never compress permanent memories
+            }
+        }
+    }
+
+    /// Generate memory summary using AI-like heuristics
+    pub async fn generate_summary(&self, memory: &MemoryItem) -> String {
+        if !self.summarization_enabled {
+            return memory.content.clone();
+        }
+
+        let content = &memory.content;
+
+        // Extract key information using heuristics
+        let summary = if content.len() > 200 {
+            // For long content, extract key sentences
+            self.extract_key_sentences(content)
+        } else if content.contains("meeting") {
+            // Meeting-specific summarization
+            self.summarize_meeting(content)
+        } else if content.contains("task") || content.contains("todo") {
+            // Task-specific summarization
+            self.summarize_task(content)
+        } else {
+            // General summarization
+            self.summarize_general(content)
+        };
+
+        format!("Summary: {}", summary)
+    }
+
+    fn extract_key_sentences(&self, content: &str) -> String {
+        // Simple sentence extraction (in production, would use NLP)
+        let sentences: Vec<&str> = content.split(&['.', '!', '?'][..]).collect();
+
+        // Take first and last sentences, plus any with keywords
+        let mut key_sentences = Vec::new();
+
+        if !sentences.is_empty() {
+            key_sentences.push(sentences[0].trim());
+        }
+
+        // Look for sentences with important keywords
+        let important_keywords = ["important", "urgent", "deadline", "meeting", "decision", "action"];
+        for sentence in &sentences {
+            let sentence_lower = sentence.to_lowercase();
+            if important_keywords.iter().any(|keyword| sentence_lower.contains(keyword)) {
+                key_sentences.push(sentence.trim());
+            }
+        }
+
+        if sentences.len() > 1 {
+            key_sentences.push(sentences[sentences.len() - 1].trim());
+        }
+
+        key_sentences.join(". ")
+    }
+
+    fn summarize_meeting(&self, content: &str) -> String {
+        // Extract meeting information
+        let mut summary = String::new();
+
+        // Look for action items
+        if content.to_lowercase().contains("action") {
+            summary.push_str("Action items identified. ");
+        }
+
+        // Look for decisions
+        if content.to_lowercase().contains("decision") {
+            summary.push_str("Decisions made. ");
+        }
+
+        // Look for deadlines
+        if content.to_lowercase().contains("deadline") || content.to_lowercase().contains("due") {
+            summary.push_str("Deadlines discussed. ");
+        }
+
+        if summary.is_empty() {
+            summary.push_str("Meeting discussion recorded.");
+        }
+
+        summary
+    }
+
+    fn summarize_task(&self, content: &str) -> String {
+        // Extract task information
+        let mut summary = String::new();
+
+        // Look for priority indicators
+        if content.to_lowercase().contains("urgent") {
+            summary.push_str("High priority task. ");
+        } else if content.to_lowercase().contains("important") {
+            summary.push_str("Important task. ");
+        }
+
+        // Look for due dates
+        if content.to_lowercase().contains("due") || content.to_lowercase().contains("deadline") {
+            summary.push_str("Has deadline. ");
+        }
+
+        if summary.is_empty() {
+            summary.push_str("Task created.");
+        }
+
+        summary
+    }
+
+    fn summarize_general(&self, content: &str) -> String {
+        // General content summarization
+        let word_count = content.split_whitespace().count();
+
+        if word_count > 100 {
+            format!("Long content ({} words) with key information recorded.", word_count)
+        } else {
+            "Information recorded.".to_string()
+        }
+    }
+
+    /// Compress old memories to save space
+    pub async fn compress_memory(&self, memory: &mut MemoryItem) -> MisaResult<()> {
+        if !self.should_compress(memory) {
+            return Ok(());
+        }
+
+        // Generate summary
+        let summary = self.generate_summary(memory).await;
+
+        // Update memory with compressed content
+        memory.content = summary;
+        memory.metadata = serde_json::json!({
+            "compressed": true,
+            "original_length": memory.content.len(),
+            "compression_date": chrono::Utc::now()
+        });
+
+        info!("Compressed memory: {}", memory.id);
+        Ok(())
+    }
+
+    /// Upgrade memory importance based on access patterns
+    pub fn evaluate_memory_upgrade(&self, memory: &mut MemoryItem) -> bool {
+        match memory.memory_type {
+            MemoryType::ShortTerm => {
+                // Upgrade to medium-term if frequently accessed
+                if memory.access_count > 10 ||
+                   (memory.importance == Importance::High && memory.access_count > 5) {
+                    memory.memory_type = MemoryType::MediumTerm;
+                    return true;
+                }
+            }
+            MemoryType::MediumTerm => {
+                // Upgrade to long-term if consistently important
+                let days_old = memory.created_at.signed_duration_since(chrono::Utc::now()).num_days().abs();
+                if days_old > 7 && memory.access_count > 20 && memory.importance != Importance::Low {
+                    memory.memory_type = MemoryType::LongTerm;
+                    return true;
+                }
+            }
+            MemoryType::LongTerm => {
+                // Upgrade to permanent if critical and frequently accessed
+                if memory.importance == Importance::Critical && memory.access_count > 50 {
+                    memory.memory_type = MemoryType::Permanent;
+                    return true;
+                }
+            }
+            MemoryType::Permanent => {
+                // Already permanent
+                return false;
+            }
+        }
+
+        false
+    }
+
+    /// Get memory retention policy
+    pub fn get_retention_policy(&self, memory_type: MemoryType) -> chrono::Duration {
+        match memory_type {
+            MemoryType::ShortTerm => chrono::Duration::days(1),
+            MemoryType::MediumTerm => chrono::Duration::days(self.medium_term_retention_days as i64),
+            MemoryType::LongTerm => chrono::Duration::days(self.long_term_retention_days as i64),
+            MemoryType::Permanent => chrono::Duration::days(365 * 100), // 100 years
+        }
+    }
 }
 
 impl FusionAlgorithms {
