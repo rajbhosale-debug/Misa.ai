@@ -847,7 +847,54 @@ impl ConsentManager {
     }
 
     pub async fn grant_consent(&self, session_id: &str, user_id: &str) -> MisaResult<()> {
-        // Implementation would update consent records
+        // Find the active session
+        let session = {
+            let sessions = self.active_sessions.read().await;
+            sessions.get(session_id).cloned()
+        };
+
+        let session = session.ok_or_else(|| MisaError::Security("Invalid session ID".to_string()))?;
+
+        // Find the appropriate template
+        let template = {
+            let templates = self.consent_templates.read().await;
+            // For simplicity, we'll use the first consent type from the context
+            templates.values().next().cloned()
+        };
+
+        if let Some(template) = template {
+            // Create consent record
+            let consent_record = ConsentRecord {
+                consent_id: uuid::Uuid::new_v4().to_string(),
+                user_id: user_id.to_string(),
+                consent_type: template.consent_type.clone(),
+                purpose: template.description,
+                data_types: template.data_types.clone(),
+                granted: true,
+                granted_at: Some(chrono::Utc::now()),
+                expires_at: template.expiry_days.map(|days| chrono::Utc::now() + chrono::Duration::days(days as i64)),
+                revoked_at: None,
+                version: template.version.clone(),
+                metadata: serde_json::json!({
+                    "session_id": session_id,
+                    "template_id": template.template_id,
+                    "context": session.context
+                }),
+            };
+
+            // Store consent record
+            let mut consents = self.consents.write().await;
+            consents.insert(consent_record.consent_id.clone(), consent_record);
+
+            // Update session status
+            let mut sessions = self.active_sessions.write().await;
+            if let Some(session) = sessions.get_mut(session_id) {
+                session.status = ConsentSessionStatus::Granted;
+            }
+
+            info!("Consent granted for user: {}, type: {:?}", user_id, template.consent_type);
+        }
+
         Ok(())
     }
 
