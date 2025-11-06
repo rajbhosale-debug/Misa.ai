@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*"
+           Name="MISA.AI"
+           Language="1033"
+           Version="1.0.0.0"
+           Manufacturer="MisaAI Team"
+           UpgradeCode="12345678-1234-5678-9012-123456789012">
+
+    <Package InstallerVersion="200"
+             Compressed="yes"
+             InstallScope="perMachine"
+             Description="MISA.AI - Privacy-First AI Assistant"
+             Comments="Hybrid local/cloud intelligent assistant platform"
+             Platform="x64" />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Upgrade Strategy -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of MISA.AI is already installed." />
+    <MinorUpgrade Schedule="afterInstallInitialize" />
+
+    <!-- Features -->
+    <Feature Id="ProductFeature" Title="MISA.AI" Level="1" Display="expand">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="KernelService" />
+      <ComponentRef Id="ConfigFiles" />
+      <ComponentRef Id="ApplicationShortcuts" />
+      <ComponentRef Id="DesktopShortcut" />
+      <ComponentRef Id="RegistryEntries" />
+
+      <Feature Id="DockerFeature" Title="Docker Desktop" Description="Install Docker Desktop for container support" Level="2">
+        <ComponentRef Id="DockerInstaller" />
+      </Feature>
+
+      <Feature Id="OllamaFeature" Title="Ollama AI Runtime" Description="Install Ollama for running AI models" Level="2">
+        <ComponentRef Id="OllamaInstaller" />
+      </Feature>
+
+      <Feature Id="ModelsFeature" Title="AI Models" Description="Download pre-trained AI models" Level="2">
+        <ComponentRef Id="AIModels" />
+      </Feature>
+
+      <Feature Id="ServiceFeature" Title="Windows Service Integration" Description="Install MISA Kernel as Windows service" Level="2">
+        <ComponentRef Id="ServiceRegistration" />
+      </Feature>
+    </Feature>
+
+    <!-- Directory Structure -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="MISA.AI" />
+      </Directory>
+
+      <Directory Id="ProgramDataFolder">
+        <Directory Id="DATADIR" Name="MISA.AI">
+          <Directory Id="CONFIGDIR" Name="config" />
+          <Directory Id="MODELSDIR" Name="models" />
+          <Directory Id="LOGSDIR" Name="logs" />
+          <Directory Id="TEMPDIR" Name="temp" />
+        </Directory>
+      </Directory>
+
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="MISA.AI"/>
+      </Directory>
+
+      <Directory Id="DesktopFolder" Name="Desktop" />
+    </Directory>
+
+    <!-- Main Application Components -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="MainExecutable" Guid="*">
+        <File Id="MisaAIexe" Source="$(var.SourceDir)\MisaAI.exe" KeyPath="yes" />
+        <File Id="MisaAICore" Source="$(var.SourceDir)\misa-core.dll" />
+        <File Id="QtLibraries" Source="$(var.SourceDir)\*.dll" />
+
+        <!-- Self-registration would be replaced with proper registration -->
+        <ServiceInstall Id="MisaKernelService"
+                       Type="ownProcess"
+                       Vital="yes"
+                       Name="MisaKernel"
+                       DisplayName="MISA.AI Kernel Service"
+                       Description="MISA.AI Kernel - Background AI Assistant Service"
+                       Start="auto"
+                       Account="LocalSystem"
+                       ErrorControl="ignore"
+                       Interactive="no">
+          <ServiceDependency Id="Tcpip"/>
+          <ServiceDependency Id="Docker"/>
+        </ServiceInstall>
+
+        <ServiceControl Id="StartService"
+                       Start="install"
+                       Stop="both"
+                       Remove="uninstall"
+                       Name="MisaKernel"
+                       Wait="yes" />
+      </Component>
+
+      <Component Id="KernelService" Guid="*">
+        <File Id="MisaKernelexe" Source="$(var.SourceDir)\MisaKernel.exe" KeyPath="yes" />
+        <File Id="KernelLibraries" Source="$(var.SourceDir)\kernel\*.dll" />
+      </Component>
+
+      <Component Id="ConfigFiles" Guid="*">
+        <File Id="DefaultConfig" Source="$(var.SourceDir)\config\default.json" />
+        <File Id="LicenseFile" Source="$(var.SourceDir)\LICENSE" />
+        <File Id="ReadmeFile" Source="$(var.SourceDir)\README.md" />
+
+        <!-- Configuration file modification -->
+        <util:XmlFile Id="SetInstallPath"
+                     File="[DATADIR]config\misa.json"
+                     Action="setValue"
+                     Name="installation.path"
+                     Value="[INSTALLFOLDER]"
+                     ElementPath="/configuration/installation"
+                     Sequence="execute" />
+
+        <util:XmlFile Id="SetDataPath"
+                     File="[DATADIR]config\misa.json"
+                     Action="setValue"
+                     Name="dataPath"
+                     Value="[DATADIR]"
+                     ElementPath="/configuration/installation"
+                     Sequence="execute" />
+      </Component>
+
+      <Component Id="ApplicationShortcuts" Guid="*">
+        <Shortcut Id="ApplicationStartMenuShortcut"
+                  Name="MISA.AI"
+                  Description="Privacy-First AI Assistant"
+                  Target="[#MisaAIexe]"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="MisaAI.exe"
+                  IconIndex="0" />
+
+        <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall"/>
+        <RegistryValue Root="HKCU"
+                      Key="Software\Microsoft\MisaAI"
+                      Name="installed"
+                      Type="integer"
+                      Value="1"
+                      KeyPath="yes"/>
+      </Component>
+
+      <Component Id="DesktopShortcut" Guid="*">
+        <Condition>INSTALLDESKTOPSHORTCUT</Condition>
+        <Shortcut Id="ApplicationDesktopShortcut"
+                  Name="MISA.AI"
+                  Description="Privacy-First AI Assistant"
+                  Target="[#MisaAIexe]"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="MisaAI.exe"
+                  IconIndex="0" />
+        <RegistryValue Root="HKCU"
+                      Key="Software\Microsoft\MisaAI"
+                      Name="desktopShortcut"
+                      Type="integer"
+                      Value="1"
+                      KeyPath="yes"/>
+      </Component>
+
+      <Component Id="RegistryEntries" Guid="*">
+        <!-- File associations -->
+        <RegistryKey Root="HKCR" Key=".misanotes">
+          <RegistryValue Type="string" Value="MisaNotes" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="MisaNotes">
+          <RegistryValue Type="string" Value="MISA.AI Notes" />
+          <RegistryKey Key="DefaultIcon">
+            <RegistryValue Type="string" Value="[#MisaAIexe],0" />
+          </RegistryKey>
+          <RegistryKey Key="shell\open\command">
+            <RegistryValue Type="string" Value="&quot;[#MisaAIexe]&quot; &quot;%1&quot;" />
+          </RegistryKey>
+        </RegistryKey>
+
+        <!-- Protocol handler -->
+        <RegistryKey Root="HKCR" Key="misa">
+          <RegistryValue Type="string" Value="MISA.AI Protocol" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="misa\shell\open\command">
+          <RegistryValue Type="string" Value="&quot;[#MisaAIexe]&quot; &quot;%1&quot;" />
+        </RegistryKey>
+
+        <!-- Version information -->
+        <RegistryKey Root="HKLM" Key="Software\MisaAI\MISA.AI">
+          <RegistryValue Name="InstallPath" Type="string" Value="[INSTALLFOLDER]" />
+          <RegistryValue Name="DataPath" Type="string" Value="[DATADIR]" />
+          <RegistryValue Name="Version" Type="string" Value="1.0.0" />
+          <RegistryValue Name="InstallDate" Type="string" Value="[Date]" />
+        </RegistryKey>
+      </Component>
+    </DirectoryRef>
+
+    <!-- Data Directory Components -->
+    <DirectoryRef Id="DATADIR">
+      <Component Id="ServiceRegistration" Guid="*">
+        <CreateFolder Directory="CONFIGDIR" />
+        <CreateFolder Directory="MODELSDIR" />
+        <CreateFolder Directory="LOGSDIR" />
+        <CreateFolder Directory="TEMPDIR" />
+
+        <!-- Service configuration -->
+        <IniFile Id="ServiceConfig"
+                Key="InstallPath"
+                Dir="CONFIGDIR"
+                Name="service.ini"
+                Section="Service"
+                Value="[INSTALLFOLDER]" />
+        <IniFile Id="DataConfig"
+                Key="DataPath"
+                Dir="CONFIGDIR"
+                Name="service.ini"
+                Section="Service"
+                Value="[DATADIR]" />
+      </Component>
+    </DirectoryRef>
+
+    <!-- Docker Installation Component -->
+    <Component Id="DockerInstaller" Guid="*">
+      <File Id="DockerDesktopInstaller" Source="$(var.SourceDir)\bundles\DockerDesktopInstaller.exe" KeyPath="yes" />
+
+      <CustomAction Id="InstallDocker"
+                   FileKey="DockerDesktopInstaller"
+                   ExeCommand="/quiet /accept-license"
+                   Return="ignore"
+                   Execute="deferred"
+                   Impersonate="no" />
+
+      <InstallExecuteSequence>
+        <Custom Action="InstallDocker" Before="InstallFinalize">
+          &amp;DockerFeature=3 AND NOT Installed
+        </Custom>
+      </InstallExecuteSequence>
+    </Component>
+
+    <!-- Ollama Installation Component -->
+    <Component Id="OllamaInstaller" Guid="*">
+      <File Id="OllamaInstaller" Source="$(var.SourceDir)\bundles\ollama-windows.exe" KeyPath="yes" />
+
+      <CustomAction Id="InstallOllama"
+                   FileKey="OllamaInstaller"
+                   ExeCommand="/S"
+                   Return="ignore"
+                   Execute="deferred"
+                   Impersonate="no" />
+
+      <InstallExecuteSequence>
+        <Custom Action="InstallOllama" Before="InstallFinalize">
+          &amp;OllamaFeature=3 AND NOT Installed
+        </Custom>
+      </InstallExecuteSequence>
+    </Component>
+
+    <!-- AI Models Component -->
+    <Component Id="AIModels" Guid="*">
+      <File Id="MixtralModel" Source="$(var.SourceDir)\models\mixtral.gguf" />
+      <File Id="CodeLlamaModel" Source="$(var.SourceDir)\models\codellama.gguf" />
+      <File Id="WizardCoderModel" Source="$(var.SourceDir)\models\wizardcoder.gguf" />
+    </Component>
+
+    <!-- Properties -->
+    <Property Id="INSTALLDESKTOPSHORTCUT" Secure="yes" Value="1" />
+    <Property Id="ARPHELPLINK" Value="https://support.misa.ai" />
+    <Property Id="ARPURLINFOABOUT" Value="https://misa.ai" />
+    <Property Id="ARPNOREPAIR" Value="1" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+
+    <!-- UI References -->
+    <UIRef Id="WixUI_FeatureTree" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+
+    <!-- WiX Variables -->
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.SourceDir)\resources\license.rtf" />
+    <WixVariable Id="WixUIBannerBmp" Value="$(var.SourceDir)\resources\banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="$(var.SourceDir)\resources\dialog.bmp" />
+
+    <!-- Custom Actions -->
+    <Binary Id="CustomActionsDLL" SourceFile="$(var.SourceDir)\CustomActions.dll" />
+
+    <CustomAction Id="ValidatePrerequisites"
+                 BinaryKey="CustomActionsDLL"
+                 DllEntry="ValidatePrerequisites"
+                 Execute="immediate" />
+
+    <CustomAction Id="ConfigureFirewall"
+                 BinaryKey="CustomActionsDLL"
+                 DllEntry="ConfigureFirewall"
+                 Execute="deferred"
+                 Impersonate="no" />
+
+    <CustomAction Id="RegisterService"
+                 BinaryKey="CustomActionsDLL"
+                 DllEntry="RegisterService"
+                 Execute="deferred"
+                 Impersonate="no" />
+
+    <!-- Installation Sequence -->
+    <InstallExecuteSequence>
+      <Custom Action="ValidatePrerequisites" Before="LaunchConditions" />
+      <Custom Action="ConfigureFirewall" After="InstallFiles">NOT REMOVE</Custom>
+      <Custom Action="RegisterService" After="ConfigureFirewall">&amp;ServiceFeature=3</Custom>
+    </InstallExecuteSequence>
+
+  </Product>
+</Wix>
