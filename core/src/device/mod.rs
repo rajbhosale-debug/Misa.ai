@@ -1248,7 +1248,8 @@ impl ClipboardSync {
         debug!("Setting clipboard: {}", content);
 
         // Update last clipboard hash to prevent sync loop
-        let content_hash = format!("{:x}", md5::compute(content.as_bytes()));
+        let digest = compute_md5(content.as_bytes());
+        let content_hash = format!("{:02x?}", digest);
         let mut last_hash = self.last_clipboard_hash.write().await;
         *last_hash = Some(content_hash);
 
