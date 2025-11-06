@@ -182,6 +182,13 @@
             android:enabled="true"
             android:exported="false" />
 
+        <!-- Update Service -->
+        <service
+            android:name=".update.UpdateService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <!-- Background Work Managers -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
