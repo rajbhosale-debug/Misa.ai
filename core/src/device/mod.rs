@@ -772,7 +772,7 @@ impl DiscoveryService {
         let active_discovery_listener = Arc::clone(&self.active_discovery);
         let listener_socket = tokio::net::UdpSocket::bind(("0.0.0.0", self.discovery_port + 1))
             .await
-            .map_err(|e| MisaError::Network(format!("Failed to bind listener socket: {}", e)))?;
+            .map_err(|e| MisaError::Device(format!("Failed to bind listener socket: {}", e)))?;
 
         tokio::spawn(async move {
             let mut buf = [0u8; 1024];
