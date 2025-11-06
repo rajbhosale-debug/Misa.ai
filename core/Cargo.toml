@@ -62,6 +62,8 @@ anyhow = "1.0"
 thiserror = "1.0"
 clap = { version = "4.0", features = ["derive"] }
 config = "0.13"
+async-trait = "0.1"
+toml = "0.8"
 
 # Dev dependencies
 [dev-dependencies]
