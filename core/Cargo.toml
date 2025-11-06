@@ -79,17 +79,7 @@ path = "src/main.rs"
 name = "misa_core"
 path = "src/lib.rs"
 
-# Workspace members
-[workspace]
-members = [
-    ".",
-    "src/kernel",
-    "src/models",
-    "src/security",
-    "src/device",
-    "src/memory",
-    "src/privacy"
-]
+# This is a single crate application, not a workspace
 
 [profile.release]
 lto = true
