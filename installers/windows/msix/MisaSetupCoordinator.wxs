@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+
+  <!-- Product Definition -->
+  <Product Id="*"
+           Name="MISA.AI"
+           Language="1033"
+           Version="2.0.0.0"
+           Manufacturer="MISA.AI"
+           UpgradeCode="12345678-1234-5678-9012-123456789012">
+
+    <!-- Package Definition for MSIX -->
+    <Package InstallerVersion="200"
+             Compressed="yes"
+             Description="MISA.AI Privacy-First AI Assistant Platform"
+             Comments="Unified installation with mobile coordination and upgrade pairing"
+             Platform="x64"
+             InstallScope="perMachine"/>
+
+    <!-- Media Definition -->
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Features -->
+    <Feature Id="ProductFeature" Title="MISA.AI" Level="1">
+      <ComponentGroupRef Id="MisaComponents" />
+      <ComponentRef Id="MisaServices" />
+      <ComponentRef Id="CoordinationComponents" />
+      <ComponentRef Id="RegistryEntries" />
+    </Feature>
+
+    <!-- Major Upgrade -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of MISA.AI is already installed." />
+
+    <!-- Custom Actions for Coordination -->
+    <Binary Id="CustomActionsDLL" SourceFile="CustomActions.dll" />
+
+    <!-- Check for running processes -->
+    <CustomAction Id="CheckRunningProcesses"
+                  BinaryRef="CustomActionsDLL"
+                  DllEntry="CheckRunningProcesses"
+                  Execute="immediate"
+                  Return="check" />
+
+    <!-- Discover mobile devices -->
+    <CustomAction Id="DiscoverMobileDevices"
+                  BinaryRef="CustomActionsDLL"
+                  DllEntry="DiscoverMobileDevices"
+                  Execute="immediate"
+                  Return="check" />
+
+    <!-- Initialize installation state -->
+    <CustomAction Id="InitializeInstallState"
+                  BinaryRef="CustomActionsDLL"
+                  DllEntry="InitializeInstallState"
+                  Execute="immediate"
+                  Return="check" />
+
+    <!-- Start coordination server -->
+    <CustomAction Id="StartCoordinationServer"
+                  BinaryRef="CustomActionsDLL"
+                  DllEntry="StartCoordinationServer"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="check" />
+
+    <!-- Install prerequisites -->
+    <CustomAction Id="InstallPrerequisites"
+                  BinaryRef="CustomActionsDLL"
+                  DllEntry="InstallPrerequisites"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="check" />
+
+    <!-- Handle Windows restart scenarios -->
+    <CustomAction Id="HandleRestartScenarios"
+                  BinaryRef="CustomActionsDLL"
+                  DllEntry="HandleRestartScenarios"
+                  Execute="immediate"
+                  Return="check" />
+
+    <!-- Report installation progress -->
+    <CustomAction Id="ReportProgress"
+                  BinaryRef="CustomActionsDLL"
+                  DllEntry="ReportProgress"
+                  Execute="immediate"
+                  Return="ignore" />
+
+    <!-- Schedule restart if needed -->
+    <CustomAction Id="ScheduleRestart"
+                  BinaryRef="CustomActionsDLL"
+                  DllEntry="ScheduleRestart"
+                  Execute="immediate"
+                  Return="check" />
+
+    <!-- UI Custom Actions -->
+    <CustomAction Id="SetMobileDiscoveryUI"
+                  Property="MOBILE_DISCOVERY_ENABLED"
+                  Value="1" />
+
+    <CustomAction Id="ShowMobileCoordinationDialog"
+                  BinaryRef="CustomActionsDLL"
+                  DllEntry="ShowMobileCoordinationDialog"
+                  Execute="immediate"
+                  Return="ignore" />
+
+    <!-- Installation Sequence -->
+    <InstallExecuteSequence>
+      <!-- Pre-installation checks -->
+      <Custom Action="CheckRunningProcesses" Before="AppSearch" />
+      <Custom Action="InitializeInstallState" After="AppSearch" />
+
+      <!-- Mobile device discovery -->
+      <Custom Action="DiscoverMobileDevices" After="InitializeInstallState" />
+      <Custom Action="ShowMobileCoordinationDialog" After="DiscoverMobileDevices" />
+
+      <!-- Main installation -->
+      <Custom Action="InstallPrerequisites" After="InstallFiles" />
+
+      <!-- Coordination setup -->
+      <Custom Action="StartCoordinationServer" After="InstallPrerequisites" />
+
+      <!-- Restart handling -->
+      <Custom Action="HandleRestartScenarios" After="StartCoordinationServer" />
+      <Custom Action="ScheduleRestart" Before="InstallFinalize" />
+    </InstallExecuteSequence>
+
+    <!-- UI Sequence -->
+    <InstallUISequence>
+      <Custom Action="SetMobileDiscoveryUI" Before="WelcomeDlg" />
+    </InstallUISequence>
+
+    <!-- Directories -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="MISA.AI">
+          <!-- Main application files -->
+          <Directory Id="ServicesDirectory" Name="services" />
+          <Directory Id="ConfigDirectory" Name="config" />
+          <Directory Id="LogsDirectory" Name="logs" />
+          <Directory Id="CoordinationDirectory" Name="coordination" />
+        </Directory>
+      </Directory>
+
+      <!-- User data directory -->
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="USERDATAFOLDER" Name="MISA.AI">
+          <Directory Id="UserDataDirectory" Name="data" />
+          <Directory Id="UserConfigDirectory" Name="config" />
+        </Directory>
+      </Directory>
+
+      <!-- Start Menu -->
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="MISA.AI"/>
+      </Directory>
+
+      <!-- Desktop -->
+      <Directory Id="DesktopFolder" Name="Desktop" />
+    </Directory>
+
+    <!-- Components -->
+    <ComponentGroup Id="MisaComponents">
+      <!-- Main executable -->
+      <Component Id="MisaExecutable" Directory="INSTALLFOLDER" Guid="*">
+        <File Id="MisaExecutable"
+              Source="MisaAI.exe"
+              KeyPath="yes" />
+
+        <!-- Start Menu shortcut -->
+        <Shortcut Id="ApplicationStartMenuShortcut"
+                  Name="MISA.AI"
+                  Description="Privacy-First AI Assistant Platform"
+                  Target="[#MisaExecutable]"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Directory="ApplicationProgramsFolder"
+                  Icon="MisaIcon.exe" />
+
+        <!-- Desktop shortcut -->
+        <Shortcut Id="ApplicationDesktopShortcut"
+                  Name="MISA.AI"
+                  Description="Privacy-First AI Assistant Platform"
+                  Target="[#MisaExecutable]"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Directory="DesktopFolder"
+                  Icon="MisaIcon.exe" />
+
+        <!-- Registry entries for app registration -->
+        <RegistryKey Root="HKLM" Key="SOFTWARE\MISA.AI">
+          <RegistryValue Name="InstallPath" Type="string" Value="[INSTALLFOLDER]" />
+          <RegistryValue Name="Version" Type="string" Value="2.0.0.0" />
+          <RegistryValue Name="InstallDate" Type="string" Value="[Date]" />
+          <RegistryValue Name="CoordinationEnabled" Type="integer" Value="1" />
+        </RegistryKey>
+
+        <!-- File associations -->
+        <RegistryKey Root="HKCR" Key=".misa">
+          <RegistryValue Type="string" Value="MISA.AI" />
+          <RegistryKey Key="DefaultIcon">
+            <RegistryValue Type="string" Value="[#MisaExecutable],0" />
+          </RegistryKey>
+        </RegistryKey>
+
+        <RegistryKey Root="HKCR" Key="MISA.AI">
+          <RegistryValue Type="string" Value="MISA.AI Configuration" />
+          <RegistryKey Key="shell\open\command">
+            <RegistryValue Type="string" Value="&quot;[#MisaExecutable]&quot; &quot;%1&quot;" />
+          </RegistryKey>
+        </RegistryKey>
+
+        <!-- Protocol handler -->
+        <RegistryKey Root="HKCR" Key="misa">
+          <RegistryValue Type="string" Value="URL:MISA.AI Protocol" />
+          <RegistryValue Name="URL Protocol" Type="string" Value="" />
+          <RegistryKey Key="DefaultIcon">
+            <RegistryValue Type="string" Value="[#MisaExecutable],0" />
+          </RegistryKey>
+          <RegistryKey Key="shell\open\command">
+            <RegistryValue Type="string" Value="&quot;[#MisaExecutable]&quot; &quot;%1&quot;" />
+          </RegistryKey>
+        </RegistryKey>
+
+        <!-- Windows service registration -->
+        <ServiceInstall Id="MisaService"
+                       Type="ownProcess"
+                       Vital="yes"
+                       Name="MisaAIService"
+                       DisplayName="MISA.AI Service"
+                       Description="MISA.AI background service for coordination and device management"
+                       Start="auto"
+                       Account="LocalSystem"
+                       ErrorControl="normal"
+                       Interactive="no" />
+
+        <ServiceControl Id="StartMisaService"
+                        Start="install"
+                        Stop="both"
+                        Remove="uninstall"
+                        Name="MisaAIService"
+                        Wait="yes" />
+      </Component>
+
+      <!-- Service files -->
+      <Component Id="MisaServices" Directory="ServicesDirectory" Guid="*">
+        <File Id="MisaKernelService" Source="services\misakernel.exe" />
+        <File Id="MisaCoordinationService" Source="services\misacoordination.exe" />
+        <File Id="MisaDeviceService" Source="services\misadevice.exe" />
+        <File Id="MisaUpdateService" Source="services\misaupdate.exe" />
+
+        <!-- Service configuration -->
+        <File Id="ServiceConfig" Source="services\services.json" />
+      </Component>
+
+      <!-- Coordination components -->
+      <Component Id="CoordinationComponents" Directory="CoordinationDirectory" Guid="*">
+        <File Id="CoordinatorScript" Source="coordination\install-coordinator.ps1" />
+        <File Id="MobileDiscoveryScript" Source="coordination\mobile-discovery.ps1" />
+        <File Id="DevicePairingScript" Source="coordination\device-pairing.ps1" />
+        <File Id="InstallManagerScript" Source="scripts\windows-install-manager.ps1" />
+      </Component>
+
+      <!-- Registry entries -->
+      <Component Id="RegistryEntries" Directory="INSTALLFOLDER" Guid="*">
+        <!-- Installation state -->
+        <RegistryKey Root="HKLM" Key="SOFTWARE\MISA.AI\InstallState">
+          <RegistryValue Name="Phase" Type="string" Value="initializing" />
+          <RegistryValue Name="CoordinatorPort" Type="integer" Value="8081" />
+          <RegistryValue Name="MobileCoordination" Type="integer" Value="1" />
+          <RegistryValue Name="UpgradePairing" Type="integer" Value="1" />
+        </RegistryKey>
+
+        <!-- Mobile device registry -->
+        <RegistryKey Root="HKLM" Key="SOFTWARE\MISA.AI\MobileDevices">
+          <!-- Entries will be added dynamically during installation -->
+        </RegistryKey>
+
+        <!-- Upgrade information -->
+        <RegistryKey Root="HKLM" Key="SOFTWARE\MISA.AI\Upgrade">
+          <RegistryValue Name="LastUpgradeCheck" Type="string" Value="" />
+          <RegistryValue Name="AutoUpgrade" Type="integer" Value="1" />
+          <RegistryValue Name="BackupBeforeUpgrade" Type="integer" Value="1" />
+        </RegistryKey>
+      </Component>
+    </ComponentGroup>
+
+    <!-- User Data Components -->
+    <ComponentGroup Id="UserDataComponents">
+      <Component Id="UserDataConfig" Directory="UserConfigDirectory" Guid="*">
+        <File Id="UserConfig" Source="config\user-config.json" />
+        <RemoveFolder Id="UserDataDirectory" On="uninstall" />
+        <RemoveFolder Id="UserConfigDirectory" On="uninstall" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Properties -->
+    <Property Id="COORDINATOR_HOST" Secure="yes" />
+    <Property Id="COORDINATOR_PORT" Value="8081" />
+    <Property Id="MOBILE_COORDINATION_ENABLED" Value="1" />
+    <Property Id="UPGRADE_PAIRING_ENABLED" Value="1" />
+    <Property Id="RESTART_REQUIRED" Value="0" />
+
+    <!-- Command line properties -->
+    <Property Id="CUSTOMCOORDINATOR" Value="">
+      <RegistrySearch Id="SearchCoordinatorHost"
+                     Root="HKLM"
+                     Key="SOFTWARE\MISA.AI"
+                     Name="CoordinatorHost"
+                     Type="raw" />
+    </Property>
+
+    <Property Id="CUSTOMPORT" Value="">
+      <RegistrySearch Id="SearchCoordinatorPort"
+                     Root="HKLM"
+                     Key="SOFTWARE\MISA.AI"
+                     Name="CoordinatorPort"
+                     Type="raw" />
+    </Property>
+
+    <!-- UI Properties -->
+    <Property Id="ARPNOMODIFY" Value="1" /> <!-- Prevent modification -->
+    <Property Id="ARPNOREPAIR" Value="1" /> <!-- Prevent repair -->
+    <Property Id="MSIUSEREALADMINDETECTION" Value="1" /> <!-- Require admin -->
+
+    <!-- Icon -->
+    <Icon Id="MisaIcon.exe" SourceFile="MisaAI.exe" />
+
+    <!-- WixVariable for MSIX -->
+    <WixVariable Id="WixMbaPrereqPackageId" Value="NetFx452Redist" />
+    <WixVariable Id="WixMbaPrereqLicenseUrl" Value="http://go.microsoft.com/fwlink/?LinkId=394399" />
+
+    <!-- Features Configuration -->
+    <Feature Id="MobileCoordinationFeature"
+             Title="Mobile Device Coordination"
+             Description="Enable installation coordination with mobile devices"
+             Level="1"
+             Display="expand">
+      <ComponentRef Id="CoordinationComponents" />
+    </Feature>
+
+    <Feature Id="UpgradePairingFeature"
+             Title="Upgrade Pairing"
+             Description="Enable cross-platform upgrade and data synchronization"
+             Level="1"
+             Display="expand">
+      <ComponentRef Id="RegistryEntries" />
+    </Feature>
+
+    <!-- Upgrade Configuration -->
+    <Upgrade Id="12345678-1234-5678-9012-123456789012">
+      <UpgradeVersion Minimum="2.0.0.0" Maximum="2.0.0.0"
+                      Property="UPGRADINGPRODUCTCODE" IncludeMaximum="yes" />
+      <UpgradeVersion Minimum="2.0.0.0" IncludeMinimum="yes"
+                      Property="NEWPRODUCTFOUND" />
+      <UpgradeVersion Minimum="1.0.0.0" Maximum="2.0.0.0"
+                      Property="OLDFOUND" />
+    </Upgrade>
+
+    <!-- Custom Actions for Upgrade -->
+    <CustomAction Id="BackupBeforeUpgrade"
+                  BinaryRef="CustomActionsDLL"
+                  DllEntry="BackupBeforeUpgrade"
+                  Execute="immediate"
+                  Condition="OLDFOUND" />
+
+    <CustomAction Id="MigrateUserData"
+                  BinaryRef="CustomActionsDLL"
+                  DllEntry="MigrateUserData"
+                  Execute="deferred"
+                  Condition="OLDFOUND" />
+
+    <!-- Upgrade Sequence -->
+    <InstallExecuteSequence>
+      <Custom Action="BackupBeforeUpgrade" Before="InstallInitialize" Condition="OLDFOUND" />
+      <Custom Action="MigrateUserData" After="InstallFiles" Condition="OLDFOUND" />
+    </InstallExecuteSequence>
+
+  </Product>
+</Wix>
