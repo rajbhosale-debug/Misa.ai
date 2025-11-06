@@ -49,21 +49,64 @@ Misa.ai is a comprehensive hybrid local/cloud intelligent assistant platform tha
 
 ---
 
-## 🚀 **Quick Start**
+## 🚀 **Quick Start - Install in 5 Minutes**
 
-### **Prerequisites**
+### **🎯 One-Click Installation (Recommended)**
+
+**For Users - Get MISA.AI Running Immediately:**
+```bash
+# Download and install MISA.AI automatically
+curl -fsSL https://raw.githubusercontent.com/misa-ai/misa.ai/main/scripts/install.sh | bash
+
+# Or download and run manually
+wget https://raw.githubusercontent.com/misa-ai/misa.ai/main/scripts/install.sh
+chmod +x install.sh
+./install.sh
+```
+
+**That's it!** 🎉 Installation includes:
+- ✅ All 18 AI-powered applications
+- ✅ Local AI models (Mixtral, CodeLlama)
+- ✅ Privacy-first configuration
+- ✅ Automatic updates and management scripts
+
+**Access Your AI Assistant:**
+- 📱 **Web App**: http://localhost:3000
+- 🔧 **Kernel API**: http://localhost:8080
+
+**Management Commands:**
+```bash
+# After installation, use these commands:
+~/.misa-ai/start.sh    # Start MISA.AI
+~/.misa-ai/stop.sh     # Stop MISA.AI
+~/.misa-ai/status.sh   # Check status
+~/.misa-ai/update.sh   # Update to latest version
+```
+
+### **🛠️ Developers - Manual Setup**
+
+#### **Prerequisites**
 - Docker & Docker Compose
 - Node.js 18+
 - Rust 1.70+
 - Android Studio (for mobile development)
 
-### **1. Clone and Setup**
+#### **1. Clone and Setup**
 ```bash
 git clone https://github.com/misa-ai/misa.ai.git
 cd misa.ai
 ```
 
-### **2. Start Full Stack (Recommended)**
+#### **2. Quick Install with Docker**
+```bash
+# Install all dependencies automatically
+./scripts/install-dependencies.sh
+
+# Start full stack with one command
+./scripts/install.sh
+```
+
+#### **3. Traditional Development Setup**
 ```bash
 # Navigate to infrastructure
 cd infrastructure/docker
@@ -75,22 +118,43 @@ docker-compose up -d
 docker-compose ps
 ```
 
-### **3. Access Applications**
-- **Web App**: http://localhost
+#### **4. Access Applications**
+- **Web App**: http://localhost:3000
 - **Kernel API**: http://localhost:8080
 - **Android App**: Build and install from `android/` directory
 - **Desktop App**: Build and run from `desktop/` directory
-- **Monitoring**: Grafana at http://localhost:3000
+- **Monitoring**: Grafana at http://localhost:3001
 
-### **4. Configure AI Models**
+#### **5. Configure AI Models**
 ```bash
 # Pull local models (first time setup)
 docker exec -it ollama ollama pull mixtral
 docker exec -it ollama ollama pull codellama
 
-# Configure cloud API keys in environment variables
+# Configure cloud API keys in environment variables (optional)
 # OPENAI_API_KEY=your_key_here
 # ANTHROPIC_API_KEY=your_key_here
+```
+
+### **📱 Platform-Specific Downloads**
+
+**Direct Downloads:**
+- **Windows**: [Download MSI Installer](https://github.com/misa-ai/misa.ai/releases/latest/download/misa-ai-windows-amd64.msi)
+- **macOS**: [Download DMG Package](https://github.com/misa-ai/misa.ai/releases/latest/download/misa-ai-macos-amd64.dmg)
+- **Linux**: [Download AppImage](https://github.com/misa-ai/misa.ai/releases/latest/download/misa-ai-linux-amd64.AppImage)
+- **Android**: [Download APK](https://github.com/misa-ai/misa.ai/releases/latest/download/misa-ai-android.apk)
+
+**Package Managers:**
+```bash
+# macOS (Homebrew)
+brew install misa-ai/misa-ai/misa-ai
+
+# Linux (Snap)
+snap install misa-ai
+
+# Docker Hub
+docker pull misa-ai/complete:latest
+docker run -p 3000:3000 -p 8080:8080 misa-ai/complete
 ```
 
 ---
