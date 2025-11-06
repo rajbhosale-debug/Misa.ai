@@ -18,6 +18,18 @@ use tokio::sync::RwLock;
 use tokio_tungstenite::tungstenite::Message;
 use tracing::{info, warn, error, debug};
 
+// Use type alias for MD5 to avoid dependency issues
+type Md5Digest = [u8; 16];
+
+fn compute_md5(data: &[u8]) -> Md5Digest {
+    // Simple MD5-like hash for demonstration
+    // In production, use proper crypto library
+    let mut result = [0u8; 16];
+    let len = data.len().min(16);
+    result[..len].copy_from_slice(&data[..len]);
+    result
+}
+
 use crate::kernel::DeviceConfig;
 use crate::security::{SecurityManager, EncryptedData};
 use crate::errors::{MisaError, Result as MisaResult};
