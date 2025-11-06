@@ -733,11 +733,78 @@ pub struct DeletionResult {
 
 impl ConsentManager {
     pub async fn new(data_dir: &str) -> MisaResult<Self> {
-        Ok(Self {
+        let mut manager = Self {
             consents: Arc::new(RwLock::new(HashMap::new())),
             consent_templates: Arc::new(RwLock::new(HashMap::new())),
             active_sessions: Arc::new(RwLock::new(HashMap::new())),
-        })
+        };
+
+        // Initialize default consent templates
+        manager.initialize_default_templates().await?;
+
+        Ok(manager)
+    }
+
+    /// Initialize default consent templates
+    async fn initialize_default_templates(&mut self) -> MisaResult<()> {
+        let templates = vec![
+            ConsentTemplate {
+                template_id: "cloud_sync".to_string(),
+                name: "Cloud Synchronization".to_string(),
+                description: "Sync your data securely to Misa Cloud for access across devices".to_string(),
+                consent_type: ConsentType::CloudSync,
+                data_types: vec![DataType::PersonalInfo, DataType::TextData, DataType::CalendarData],
+                required: false,
+                version: "1.0".to_string(),
+                expiry_days: Some(365),
+                privacy_policy_url: Some("https://misa.ai/privacy".to_string()),
+                help_text: Some("Your data is encrypted before leaving your device".to_string()),
+            },
+            ConsentTemplate {
+                template_id: "analytics".to_string(),
+                name: "Usage Analytics".to_string(),
+                description: "Help us improve Misa by sharing anonymous usage statistics".to_string(),
+                consent_type: ConsentType::Analytics,
+                data_types: vec![DataType::UsageData, DataType::DeviceData],
+                required: false,
+                version: "1.0".to_string(),
+                expiry_days: Some(180),
+                privacy_policy_url: Some("https://misa.ai/privacy".to_string()),
+                help_text: "All data is anonymized and aggregated".to_string(),
+            },
+            ConsentTemplate {
+                template_id: "biometric".to_string(),
+                name: "Biometric Authentication".to_string(),
+                description: "Use fingerprint or face recognition for secure authentication".to_string(),
+                consent_type: ConsentType::Biometric,
+                data_types: vec![DataType::BiometricData],
+                required: false,
+                version: "1.0".to_string(),
+                expiry_days: None,
+                privacy_policy_url: Some("https://misa.ai/privacy".to_string()),
+                help_text: "Biometric data never leaves your device".to_string(),
+            },
+            ConsentTemplate {
+                template_id: "voice_assistant".to_string(),
+                name: "Voice Assistant".to_string(),
+                description: "Enable voice commands and dictation features".to_string(),
+                consent_type: ConsentType::Microphone,
+                data_types: vec![DataType::AudioData],
+                required: false,
+                version: "1.0".to_string(),
+                expiry_days: Some(365),
+                privacy_policy_url: Some("https://misa.ai/privacy".to_string()),
+                help_text: "Voice data is processed locally and optionally sent to AI models".to_string(),
+            },
+        ];
+
+        let mut templates_map = self.consent_templates.write().await;
+        for template in templates {
+            templates_map.insert(template.template_id.clone(), template);
+        }
+
+        info!("Initialized {} default consent templates", templates_map.len());
+        Ok(())
     }
 
     pub async fn create_consent_session(&self, user_id: &str, consent_type: ConsentType, context: serde_json::Value) -> MisaResult<String> {
