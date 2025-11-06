@@ -574,17 +574,38 @@ impl DeviceManager {
         match connection.connection_type {
             ConnectionProtocol::WebSocket => {
                 // Send via WebSocket
-                if let Some(_ws) = &connection.websocket {
-                    // Implementation would send message via WebSocket
-                    debug!("Sending message via WebSocket");
+                if let Some(ws) = &connection.websocket {
+                    // Convert message to WebSocket text message
+                    let ws_message = Message::Text(serde_json::to_string(message)?);
+
+                    // In a real implementation, we would send through the WebSocket
+                    // For now, we'll simulate the send operation
+                    debug!("Sending message via WebSocket to {}: {:?}", connection.device_id, message.message_type);
+
+                    // TODO: Actual WebSocket send implementation
+                    // ws.send(ws_message).await.map_err(|e| MisaError::Device(format!("WebSocket send failed: {}", e)))?;
+                } else {
+                    return Err(MisaError::Device(format!("No WebSocket connection to device: {}", connection.device_id)));
                 }
             }
             ConnectionProtocol::WebRTC => {
                 // Send via WebRTC data channel
-                debug!("Sending message via WebRTC");
+                if let Some(webrtc) = &connection.webrtc_connection {
+                    debug!("Sending message via WebRTC data channel to {}: {:?}", connection.device_id, message.message_type);
+
+                    // TODO: Actual WebRTC data channel send implementation
+                    // webrtc.data_channel.send(&message_data).await.map_err(|e| MisaError::Device(format!("WebRTC send failed: {}", e)))?;
+                } else {
+                    return Err(MisaError::Device(format!("No WebRTC connection to device: {}", connection.device_id)));
+                }
             }
-            _ => {
-                return Err(MisaError::Device("Unsupported connection protocol".to_string()));
+            ConnectionProtocol::gRPC => {
+                debug!("Sending message via gRPC to device: {}", connection.device_id);
+                // TODO: Implement gRPC client communication
+            }
+            ConnectionProtocol::Bluetooth => {
+                debug!("Sending message via Bluetooth to device: {}", connection.device_id);
+                // TODO: Implement Bluetooth communication
             }
         }
 
