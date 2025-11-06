@@ -508,6 +508,316 @@ export const DeviceHealthSchema = z.object({
 });
 
 // ============================================================================
+// Upgrade Coordination Types Extension
+// ============================================================================
+
+/**
+ * Device upgrade capability information
+ */
+export interface UpgradeCapability {
+  supportedUpgradeTypes: UpgradeType[];
+  maxConcurrentUpgrades: number;
+  upgradeBandwidthLimit?: number; // bytes per second
+  supportedMigrationTargets: Platform[];
+  rollbackSupport: boolean;
+  backupCapability: BackupCapability;
+}
+
+/**
+ * Migration status for device upgrades
+ */
+export interface MigrationStatus {
+  currentMigrationId?: string;
+  migrationState: MigrationState;
+  progress: MigrationProgress;
+  lastMigrationDate?: Date;
+  migrationHistory: MigrationRecord[];
+  supportedSourcePlatforms: Platform[];
+  supportedTargetPlatforms: Platform[];
+}
+
+/**
+ * Cross-platform sync settings for device configurations
+ */
+export interface CrossPlatformSync {
+  enabled: boolean;
+  syncInterval: number; // seconds
+  autoSyncCategories: SyncCategory[];
+  conflictResolution: ConflictResolutionStrategy;
+  bandwidthLimit?: number;
+  encryptionRequired: boolean;
+  compressionEnabled: boolean;
+  lastSyncDate?: Date;
+  syncStatistics: SyncStatistics;
+}
+
+/**
+ * Device upgrade coordination settings
+ */
+export interface DeviceUpgradeSettings {
+  autoUpgradeEnabled: boolean;
+  upgradeSchedule?: UpgradeSchedule;
+  preferredUpgradeTime: TimeWindow;
+  backupBeforeUpgrade: boolean;
+  notifyBeforeUpgrade: boolean;
+  upgradeWindowMinutes: number;
+  maxConcurrentUpgrades: number;
+  allowedUpgradeTypes: UpgradeType[];
+  rollbacksEnabled: boolean;
+}
+
+/**
+ * Device message types for upgrade coordination
+ */
+export type UpgradeDeviceMessageType =
+  | DeviceMessageType // Inherit all existing types
+  | 'upgrade_request'
+  | 'upgrade_response'
+  | 'migration_request'
+  | 'migration_response'
+  | 'sync_request'
+  | 'sync_response'
+  | 'backup_request'
+  | 'backup_response'
+  | 'rollback_request'
+  | 'rollback_response'
+  | 'upgrade_progress'
+  | 'migration_progress'
+  | 'sync_progress'
+  | 'upgrade_verification'
+  | 'migration_verification'
+  | 'compatibility_check'
+  | 'device_capabilities_query'
+  | 'device_capabilities_response';
+
+/**
+ * Enhanced device message with upgrade support
+ */
+export interface UpgradeDeviceMessage extends DeviceMessage {
+  messageType: UpgradeDeviceMessageType;
+  upgradeData?: UpgradeMessageData;
+}
+
+/**
+ * Upgrade-specific message data
+ */
+export interface UpgradeMessageData {
+  upgradeId?: string;
+  migrationId?: string;
+  syncId?: string;
+  upgradeType?: UpgradeType;
+  sourcePlatform?: Platform;
+  targetPlatform?: Platform;
+  upgradeProgress?: UpgradeProgress;
+  migrationProgress?: MigrationProgress;
+  syncProgress?: SyncProgress;
+  compatibilityInfo?: CompatibilityInfo;
+  deviceCapabilities?: DeviceCapabilities;
+  backupInfo?: BackupInfo;
+  rollbackInfo?: RollbackInfo;
+}
+
+// ============================================================================
+// Upgrade-Related Enums and Interfaces
+// ============================================================================
+
+export type UpgradeType =
+  | 'major'
+  | 'minor'
+  | 'patch'
+  | 'security'
+  | 'platform_migration'
+  | 'data_migration'
+  | 'configuration_sync';
+
+export type MigrationState =
+  | 'idle'
+  | 'preparing'
+  | 'in_progress'
+  | 'verifying'
+  | 'completing'
+  | 'failed'
+  | 'rolled_back';
+
+export type Platform =
+  | 'windows'
+  | 'macos'
+  | 'linux'
+  | 'android'
+  | 'ios'
+  | 'web';
+
+export type SyncCategory =
+  | 'user_settings'
+  | 'ai_models'
+  | 'application_data'
+  | 'device_history'
+  | 'security_settings'
+  | 'preferences'
+  | 'logs'
+  | 'cache';
+
+export type ConflictResolutionStrategy =
+  | 'source_wins'
+  | 'target_wins'
+  | 'merge'
+  | 'manual'
+  | 'timestamp_wins'
+  | 'ask_user';
+
+export interface BackupCapability {
+  automaticBackup: boolean;
+  manualBackup: boolean;
+  cloudBackup: boolean;
+  localBackup: boolean;
+  compressionSupport: boolean;
+  encryptionSupport: boolean;
+  maxBackupSize: number; // bytes
+  backupRetentionDays: number;
+}
+
+export interface MigrationProgress {
+  phase: MigrationPhase;
+  percentage: number; // 0-100
+  currentStep: string;
+  totalSteps: number;
+  completedSteps: number;
+  bytesTransferred: number;
+  totalBytes: number;
+  estimatedTimeRemaining: number; // seconds
+  error?: string;
+}
+
+export type MigrationPhase =
+  | 'pre_migration'
+  | 'data_export'
+  | 'platform_setup'
+  | 'data_import'
+  | 'configuration'
+  | 'validation'
+  | 'post_migration';
+
+export interface MigrationRecord {
+  migrationId: string;
+  sourcePlatform: Platform;
+  targetPlatform: Platform;
+  startTime: Date;
+  endTime?: Date;
+  status: MigrationState;
+  dataCategories: SyncCategory[];
+  bytesTransferred: number;
+  filesTransferred: number;
+  success: boolean;
+  error?: string;
+}
+
+export interface SyncStatistics {
+  totalSyncs: number;
+  successfulSyncs: number;
+  failedSyncs: number;
+  lastSyncSuccess: boolean;
+  lastSyncDate?: Date;
+  averageSyncTime: number; // seconds
+  totalDataTransferred: number; // bytes
+  syncErrorRate: number; // percentage
+}
+
+export interface UpgradeSchedule {
+  enabled: boolean;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  dayOfWeek?: number; // 0-6 (Sunday-Saturday)
+  dayOfMonth?: number; // 1-31
+  time: string; // HH:MM
+  timezone: string;
+  lastScheduledDate?: Date;
+  nextScheduledDate?: Date;
+}
+
+export interface TimeWindow {
+  start: string; // HH:MM
+  end: string; // HH:MM
+  timezone: string;
+  days: number[]; // 0-6 (Sunday-Saturday)
+}
+
+export interface UpgradeProgress {
+  phase: string;
+  percentage: number; // 0-100
+  currentStep: string;
+  totalSteps: number;
+  completedSteps: number;
+  bytesTransferred: number;
+  totalBytes: number;
+  estimatedTimeRemaining: number; // seconds
+  error?: string;
+}
+
+export interface SyncProgress {
+  phase: string;
+  percentage: number; // 0-100
+  currentStep: string;
+  totalItems: number;
+  completedItems: number;
+  bytesTransferred: number;
+  totalBytes: number;
+  transferRate: number; // bytes per second
+  estimatedTimeRemaining: number; // seconds
+  error?: string;
+}
+
+export interface CompatibilityInfo {
+  isCompatible: boolean;
+  compatibilityScore: number; // 0-100
+  issues: CompatibilityIssue[];
+  recommendations: string[];
+  requiredActions: string[];
+  migrationComplexity: 'low' | 'medium' | 'high';
+  estimatedDuration: number; // minutes
+}
+
+export interface CompatibilityIssue {
+  type: CompatibilityIssueType;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  impact: string;
+  resolution?: string;
+  userActionRequired: boolean;
+}
+
+export type CompatibilityIssueType =
+  | 'version_mismatch'
+  | 'platform_incompatibility'
+  | 'data_format_conflict'
+  | 'dependency_missing'
+  | 'hardware_requirement'
+  | 'permission_required'
+  | 'storage_insufficient'
+  | 'network_incompatible';
+
+export interface BackupInfo {
+  backupId: string;
+  createdDate: Date;
+  size: number; // bytes
+  compressed: boolean;
+  encrypted: boolean;
+  backupType: 'full' | 'incremental' | 'differential';
+  location: string;
+  checksum: string;
+  verificationStatus: 'pending' | 'verified' | 'failed';
+}
+
+export interface RollbackInfo {
+  rollbackId: string;
+  originalVersion: string;
+  targetVersion: string;
+  rollbackDate: Date;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  dataRestored: boolean;
+  rollbackReason: string;
+  estimatedDuration: number; // minutes
+}
+
+// ============================================================================
 // Re-exports
 // ============================================================================
 
