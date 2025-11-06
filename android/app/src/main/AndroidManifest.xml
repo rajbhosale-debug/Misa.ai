@@ -73,6 +73,10 @@
     <!-- Background work -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- App installation and updates -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
+
     <application
         android:name=".MisaApplication"
         android:allowBackup="true"
@@ -177,6 +181,13 @@
             android:name=".services.FileTransferService"
             android:enabled="true"
             android:exported="false" />
+
+        <!-- Update Service -->
+        <service
+            android:name=".update.UpdateService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- Background Work Managers -->
         <service

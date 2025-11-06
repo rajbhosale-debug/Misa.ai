@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+  <!-- Directory Structure Definition -->
+
+  <Fragment>
+    <DirectoryRef Id="TARGETDIR">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="CompanyFolder" Name="MisaAI">
+          <Directory Id="INSTALLFOLDER" Name="MISA.AI">
+
+            <!-- Main Application Files -->
+            <Component Id="ApplicationFiles" Guid="*">
+              <File Id="MisaAIexe" Source="$(var.SourceDir)\MisaAI.exe" KeyPath="yes">
+                <Shortcut Id="StartMenuShortcut"
+                         Directory="ApplicationProgramsFolder"
+                         Name="MISA.AI"
+                         Description="Privacy-First AI Assistant"
+                         Icon="MisaAIIcon"
+                         IconIndex="0"
+                         WorkingDirectory="INSTALLFOLDER" />
+                <Shortcut Id="DesktopShortcut"
+                         Directory="DesktopFolder"
+                         Name="MISA.AI"
+                         Description="Privacy-First AI Assistant"
+                         Icon="MisaAIIcon"
+                         IconIndex="0"
+                         WorkingDirectory="INSTALLFOLDER" />
+              </File>
+
+              <!-- Core Runtime Libraries -->
+              <File Id="MisaCoreLib" Source="$(var.SourceDir)\misa-core.dll" />
+              <File Id="Qt5Core" Source="$(var.SourceDir)\Qt5Core.dll" />
+              <File Id="Qt5Gui" Source="$(var.SourceDir)\Qt5Gui.dll" />
+              <File Id="Qt5Widgets" Source="$(var.SourceDir)\Qt5Widgets.dll" />
+              <File Id="Qt5Network" Source="$(var.SourceDir)\Qt5Network.dll" />
+              <File Id="Qt5WebEngine" Source="$(var.SourceDir)\Qt5WebEngine.dll" />
+              <File Id="Qt5WebEngineWidgets" Source="$(var.SourceDir)\Qt5WebEngineWidgets.dll" />
+
+              <!-- Runtime Dependencies -->
+              <File Id="VCRedist64" Source="$(var.SourceDir)\vc_redist.x64.exe" />
+              <File Id="MSVCP140" Source="$(var.SourceDir)\msvcp140.dll" />
+              <File Id="VCRUNTIME140" Source="$(var.SourceDir)\vcruntime140.dll" />
+              <File Id="VCRUNTIME140_1" Source="$(var.SourceDir)\vcruntime140_1.dll" />
+
+              <!-- Platform Libraries -->
+              <Directory Id="PlatformsFolder" Name="platforms">
+                <File Id="QtPlatformWindows" Source="$(var.SourceDir)\platforms\qwindows.dll" />
+                <File Id="QtPlatformMinimal" Source="$(var.SourceDir)\platforms\qminimal.dll" />
+              </Directory>
+
+              <!-- WebEngine Resources -->
+              <Directory Id="WebEngineFolder" Name="QtWebEngineProcess.exe.resources">
+                <Directory Id="WebEngineIcuFolder" Name="icudtl.dat">
+                  <File Id="IcuData" Source="$(var.SourceDir)\QtWebEngineProcess.exe.resources\icudtl.dat" />
+                </Directory>
+                <Directory Id="WebEngineLocalesFolder" Name="locales">
+                  <File Id="EnUSLocale" Source="$(var.SourceDir)\QtWebEngineProcess.exe.resources\locales\en-US.pak" />
+                </Directory>
+              </Directory>
+
+              <!-- Image Formats -->
+              <Directory Id="ImageFormatsFolder" Name="imageformats">
+                <File Id="QtJpeg" Source="$(var.SourceDir)\imageformats\qjpeg.dll" />
+                <File Id="QtPng" Source="$(var.SourceDir)\imageformats\qpng.dll" />
+                <File Id="QtGif" Source="$(var.SourceDir)\imageformats\qgif.dll" />
+              </Directory>
+
+              <!-- Audio Libraries -->
+              <Directory Id="AudioFolder" Name="audio">
+                <File Id="QtAudio" Source="$(var.SourceDir)\audio\qtaudio_windows.dll" />
+                <File Id="QtMultimedia" Source="$(var.SourceDir)\Qt5Multimedia.dll" />
+              </Directory>
+
+              <!-- Network Resources -->
+              <Directory Id="NetworkFolder" Name="network">
+                <File Id="QtSsl" Source="$(var.SourceDir)\network\qssl.dll" />
+              </Directory>
+
+              <!-- Styles -->
+              <Directory Id="StylesFolder" Name="styles">
+                <File Id="WindowsVistaStyle" Source="$(var.SourceDir)\styles\qwindowsvistastyle.dll" />
+              </Directory>
+
+              <!-- Application Resources -->
+              <Directory Id="ResourcesFolder" Name="resources">
+                <File Id="AppIcon" Source="$(var.SourceDir)\resources\app.ico" />
+                <File Id="AppConfig" Source="$(var.SourceDir)\resources\app.xml" />
+                <File Id="DefaultTheme" Source="$(var.SourceDir)\resources\theme.json" />
+                <File Id="StartupSound" Source="$(var.SourceDir)\resources\startup.wav" />
+              </Directory>
+
+              <!-- Documentation -->
+              <Directory Id="DocsFolder" Name="docs">
+                <File Id="UserGuide" Source="$(var.SourceDir)\docs\user-guide.pdf" />
+                <File Id="ApiReference" Source="$(var.SourceDir)\docs\api-reference.pdf" />
+                <File Id="License" Source="$(var.SourceDir)\LICENSE" />
+                <File Id="Readme" Source="$(var.SourceDir)\README.md" />
+              </Directory>
+
+              <!-- Scripts -->
+              <Directory Id="ScriptsFolder" Name="scripts">
+                <File Id="RegisterServiceScript" Source="$(var.SourceDir)\scripts\register-service.bat" />
+                <File Id="UnregisterServiceScript" Source="$(var.SourceDir)\scripts\unregister-service.bat" />
+                <File Id="ConfigScript" Source="$(var.SourceDir)\scripts\configure.ps1" />
+              </Directory>
+
+              <!-- Remove desktop shortcut during uninstall -->
+              <RemoveFolder Id="DesktopFolder" On="uninstall" />
+              <RegistryValue Root="HKCU"
+                            Key="Software\MisaAI\MISA.AI"
+                            Name="installed"
+                            Type="integer"
+                            Value="1"
+                            KeyPath="yes" />
+            </Component>
+
+            <!-- Kernel Service Files -->
+            <Directory Id="KernelFolder" Name="kernel">
+              <Component Id="KernelServiceFiles" Guid="*">
+                <File Id="MisaKernelexe" Source="$(var.SourceDir)\MisaKernel.exe" KeyPath="yes" />
+                <File Id="KernelCoreLib" Source="$(var.SourceDir)\kernel\misa-kernel-core.dll" />
+                <File Id="KernelHttpLib" Source="$(var.SourceDir)\kernel\http-server.dll" />
+                <File Id="KernelWslLib" Source="$(var.SourceDir)\kernel\wsl-bridge.dll" />
+                <File Id="KernelDockerLib" Source="$(var.SourceDir)\kernel\docker-bridge.dll" />
+
+                <!-- Kernel Configuration -->
+                <Directory Id="KernelConfigFolder" Name="config">
+                  <File Id="KernelDefaultConfig" Source="$(var.SourceDir)\kernel\config\default.json" />
+                  <File Id="KernelServiceConfig" Source="$(var.SourceDir)\kernel\config\service.json" />
+                  <File Id="KernelModelConfig" Source="$(var.SourceDir)\kernel\config\models.json" />
+                </Directory>
+
+                <!-- Kernel Templates -->
+                <Directory Id="KernelTemplatesFolder" Name="templates">
+                  <File Id="HttpTemplate" Source="$(var.SourceDir)\kernel\templates\http.yaml" />
+                  <File Id="ServiceTemplate" Source="$(var.SourceDir)\kernel\templates\service.yaml" />
+                </Directory>
+
+                <RegistryValue Root="HKLM"
+                              Key="Software\MisaAI\MISA.AI\Kernel"
+                              Name="installed"
+                              Type="integer"
+                              Value="1"
+                              KeyPath="yes" />
+              </Component>
+            </Directory>
+
+            <!-- Model Files -->
+            <Directory Id="ModelsFolder" Name="models">
+              <Component Id="ModelFiles" Guid="*">
+                <!-- Small models included with installer -->
+                <File Id="MixtralSmall" Source="$(var.SourceDir)\models\mixtral-small.gguf" />
+                <File Id="DolphinMistral" Source="$(var.SourceDir)\models\dolphin-mistral.gguf" />
+
+                <!-- Model metadata -->
+                <File Id="MixtralMeta" Source="$(var.SourceDir)\models\mixtral-small.json" />
+                <File Id="DolphinMeta" Source="$(var.SourceDir)\models\dolphin-mistral.json" />
+                <File Id="ModelIndex" Source="$(var.SourceDir)\models\index.json" />
+
+                <RemoveFolder Id="ModelsFolder" On="uninstall" />
+                <RegistryValue Root="HKLM"
+                              Key="Software\MisaAI\MISA.AI\Models"
+                              Name="installed"
+                              Type="integer"
+                              Value="1"
+                              KeyPath="yes" />
+              </Component>
+            </Directory>
+
+            <!-- Dependency Installers -->
+            <Directory Id="BundlesFolder" Name="bundles">
+              <Component Id="DependencyInstallers" Guid="*">
+                <File Id="DockerDesktopInstaller" Source="$(var.SourceDir)\bundles\DockerDesktopInstaller.exe" />
+                <File Id="OllamaInstaller" Source="$(var.SourceDir)\bundles\ollama-windows.exe" />
+                <File Id="VCRedistInstaller" Source="$(var.SourceDir)\bundles\vc_redist.x64.exe" />
+                <File Id="WebView2Installer" Source="$(var.SourceDir)\bundles\MicrosoftEdgeWebView2Setup.exe" />
+
+                <RemoveFolder Id="BundlesFolder" On="uninstall" />
+                <RegistryValue Root="HKLM"
+                              Key="Software\MisaAI\MISA.AI\Bundles"
+                              Name="installed"
+                              Type="integer"
+                              Value="1"
+                              KeyPath="yes" />
+              </Component>
+            </Directory>
+
+          </Directory>
+        </Directory>
+      </Directory>
+
+      <!-- Common Application Data -->
+      <Directory Id="CommonAppDataFolder">
+        <Directory Id="CompanyDataFolder" Name="MisaAI">
+          <Directory Id="AppDataFolder" Name="MISA.AI">
+
+            <!-- Configuration Directory -->
+            <Directory Id="ConfigDataDir" Name="config">
+              <Component Id="ConfigurationData" Guid="*">
+                <CreateFolder>
+                  <Permission User="Everyone" GenericAll="yes" />
+                </CreateFolder>
+
+                <!-- Default configuration files -->
+                <File Id="DefaultAppConfig" Source="$(var.SourceDir)\config\default.json" />
+                <File Id="DefaultModelConfig" Source="$(var.SourceDir)\config\models.json" />
+                <File Id="DefaultNetworkConfig" Source="$(var.SourceDir)\config\network.json" />
+                <File Id="DefaultPrivacyConfig" Source="$(var.SourceDir)\config\privacy.json" />
+
+                <RegistryValue Root="HKLM"
+                              Key="Software\MisaAI\MISA.AI\Config"
+                              Name="installed"
+                              Type="integer"
+                              Value="1"
+                              KeyPath="yes" />
+              </Component>
+            </Directory>
+
+            <!-- Data Directory -->
+            <Directory Id="DataDir" Name="data">
+              <Component Id="ApplicationData" Guid="*">
+                <CreateFolder>
+                  <Permission User="Everyone" GenericAll="yes" />
+                </CreateFolder>
+
+                <!-- Create empty database file -->
+                <Component Id="DatabaseFiles" Guid="*">
+                  <File Id="DatabaseTemplate" Source="$(var.SourceDir)\data\misa-template.db" />
+                </Component>
+
+                <RegistryValue Root="HKLM"
+                              Key="Software\MisaAI\MISA.AI\Data"
+                              Name="installed"
+                              Type="integer"
+                              Value="1"
+                              KeyPath="yes" />
+              </Component>
+            </Directory>
+
+            <!-- Logs Directory -->
+            <Directory Id="LogsDataDir" Name="logs">
+              <Component Id="LogData" Guid="*">
+                <CreateFolder>
+                  <Permission User="Everyone" GenericAll="yes" />
+                </CreateFolder>
+
+                <RegistryValue Root="HKLM"
+                              Key="Software\MisaAI\MISA.AI\Logs"
+                              Name="installed"
+                              Type="integer"
+                              Value="1"
+                              KeyPath="yes" />
+              </Component>
+            </Directory>
+
+            <!-- Temp Directory -->
+            <Directory Id="TempDataDir" Name="temp">
+              <Component Id="TempData" Guid="*">
+                <CreateFolder>
+                  <Permission User="Everyone" GenericAll="yes" />
+                </CreateFolder>
+
+                <RegistryValue Root="HKLM"
+                              Key="Software\MisaAI\MISA.AI\Temp"
+                              Name="installed"
+                              Type="integer"
+                              Value="1"
+                              KeyPath="yes" />
+              </Component>
+            </Directory>
+
+            <!-- Backups Directory -->
+            <Directory Id="BackupsDataDir" Name="backups">
+              <Component Id="BackupData" Guid="*">
+                <CreateFolder>
+                  <Permission User="Everyone" GenericAll="yes" />
+                </CreateFolder>
+
+                <RegistryValue Root="HKLM"
+                              Key="Software\MisaAI\MISA.AI\Backups"
+                              Name="installed"
+                              Type="integer"
+                              Value="1"
+                              KeyPath="yes" />
+              </Component>
+            </Directory>
+
+          </Directory>
+        </Directory>
+      </Directory>
+
+      <!-- Start Menu -->
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="MISA.AI">
+          <Component Id="StartMenuItems" Guid="*">
+            <!-- Main application shortcut -->
+            <Shortcut Id="StartMenuShortcut"
+                     Name="MISA.AI"
+                     Description="Privacy-First AI Assistant"
+                     Target="[#MisaAIexe]"
+                     WorkingDirectory="INSTALLFOLDER"
+                     Icon="MisaAIIcon"
+                     IconIndex="0" />
+
+            <!-- Documentation shortcuts -->
+            <Shortcut Id="UserGuideShortcut"
+                     Name="User Guide"
+                     Description="MISA.AI User Documentation"
+                     Target="[#UserGuide]"
+                     WorkingDirectory="DocsFolder" />
+
+            <Shortcut Id="UninstallShortcut"
+                     Name="Uninstall MISA.AI"
+                     Description="Remove MISA.AI from your computer"
+                     Target="[SystemFolder]msiexec.exe"
+                     Arguments="/x [ProductCode]"
+                     Icon="UninstallIcon"
+                     IconIndex="0" />
+
+            <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+            <RegistryValue Root="HKCU"
+                          Key="Software\MisaAI\MISA.AI\StartMenu"
+                          Name="installed"
+                          Type="integer"
+                          Value="1"
+                          KeyPath="yes" />
+          </Component>
+        </Directory>
+      </Directory>
+
+    </DirectoryRef>
+
+  </Fragment>
+
+</Wix>

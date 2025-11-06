@@ -32,15 +32,57 @@ android {
             buildConfigField("String", "KERNEL_URL", "\"http://10.0.2.2:8080\"")
             isMinifyEnabled = false
             isDebuggable = true
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
         }
         release {
             buildConfigField("String", "KERNEL_URL", "\"https://api.misa.ai\"")
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
             isDebuggable = false
+            signingConfig = signingConfigs.getByName("release")
+
+            // Optimize APK size
+            ndk {
+                abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
+            }
+
+            // Enable R8 full mode
+            isDebuggable = false
+        }
+    }
+
+    // Split APKs by architecture for smaller downloads
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = false
+        }
+    }
+
+    // Configure signing
+    signingConfigs {
+        create("release") {
+            // Check if keystore exists in installers directory
+            val keystoreFile = file("../../installers/android/signing/release.keystore")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "misa2024"
+                keyAlias = System.getenv("KEY_ALIAS") ?: "misa-release"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: "misa2024"
+            } else {
+                // Fallback to debug keystore for development
+                storeFile = file("../debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
     }
 

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- For sharing downloaded APK files -->
+    <external-path name="external_downloads" path="Download/"/>
+
+    <!-- For sharing files from app's external files directory -->
+    <external-files-path name="external_files" path="."/>
+
+    <!-- For sharing files from app's internal files directory -->
+    <files-path name="internal_files" path="."/>
+
+    <!-- For sharing cache files -->
+    <cache-path name="cache" path="."/>
+
+    <!-- For sharing external cache files -->
+    <external-cache-path name="external_cache" path="."/>
+
+    <!-- For sharing files from app's external data directory -->
+    <external-files-path name="external_app_data" path="data/"/>
+</paths>

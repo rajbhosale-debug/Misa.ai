@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
+    <ProjectGuid>{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}</ProjectGuid>
+    <OutputType>AppxPackage</OutputType>
+    <AppxPackage>True</AppxPackage>
+    <ProjectName>MisaPackage</ProjectName>
+    <RootNamespace>MisaPackage</RootNamespace>
+    <AssemblyName>MisaAI</AssemblyName>
+    <TargetFrameworkIdentifier>.NETFramework</TargetFrameworkIdentifier>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeGuids>{BC8A1FFA-BEE3-4634-8014-F3347E102E20};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.19041.0</WindowsTargetPlatformMinVersion>
+    <PackageCertificateThumbprint>$(CertificateThumbprint)</PackageCertificateThumbprint>
+    <PackageCertificateKeyFile>$(CertificateFile)</PackageCertificateKeyFile>
+    <AppxBundlePlatforms>x64</AppxBundlePlatforms>
+    <AppxBundle>Always</AppxBundle>
+    <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
+    <GenerateAppInstallerFile>True</GenerateAppInstallerFile>
+    <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
+    <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
+    <GenerateTestArtifacts>True</GenerateTestArtifacts>
+    <AppxBundle>Never</AppxBundle>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AppxManifest Include="MisaPackage.appxmanifest">
+      <SubType>Designer</SubType>
+    </AppxManifest>
+  </ItemGroup>
+
+  <!-- Application Files -->
+  <ItemGroup>
+    <Content Include="..\..\..\desktop\target\x86_64-pc-windows-msvc\release\misa-desktop.exe">
+      <Pack>true</Pack>
+      <PackagePath>MisaAI.exe</PackagePath>
+      <DestinationPath>MisaAI.exe</DestinationPath>
+    </Content>
+    <Content Include="..\..\..\core\target\x86_64-pc-windows-msvc\release\misa-kernel.exe">
+      <Pack>true</Pack>
+      <PackagePath>MisaKernel.exe</PackagePath>
+      <DestinationPath>MisaKernel.exe</DestinationPath>
+    </Content>
+  </ItemGroup>
+
+  <!-- Runtime Dependencies -->
+  <ItemGroup>
+    <Content Include="..\..\..\core\models\mixtral.gguf">
+      <Pack>true</Pack>
+      <PackagePath>models\mixtral.gguf</PackagePath>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Installer Scripts -->
+  <ItemGroup>
+    <Content Include="scripts\**">
+      <Pack>true</Pack>
+      <PackagePath>scripts\</PackagePath>
+    </Content>
+  </ItemGroup>
+
+  <!-- Application Resources -->
+  <ItemGroup>
+    <Content Include="resources\**">
+      <Pack>true</Pack>
+      <PackagePath>resources\</PackagePath>
+    </Content>
+  </ItemGroup>
+
+  <!-- Application Assets -->
+  <ItemGroup>
+    <Content Include="Assets\**">
+      <Pack>true</Pack>
+      <PackagePath>Assets\</PackagePath>
+    </Content>
+  </ItemGroup>
+
+  <!-- Dependency Bundles -->
+  <ItemGroup>
+    <Content Include="..\bundles\DockerDesktopInstaller.exe">
+      <Pack>true</Pack>
+      <PackagePath>bundles\</PackagePath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\bundles\ollama-windows.exe">
+      <Pack>true</Pack>
+      <PackagePath>bundles\</PackagePath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- External Dependencies -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools">
+      <Version>10.0.22621.2428</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
+      <Version>6.2.14</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Toolkit.Win32.UI.Controls">
+      <Version>6.1.3</Version>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- Build Targets -->
+  <Target Name="BeforeBuild">
+    <!-- Validate Tauri build exists -->
+    <Error Text="Tauri desktop executable not found. Build the desktop app first."
+           Condition="!Exists('..\..\..\desktop\target\x86_64-pc-windows-msvc\release\misa-desktop.exe')" />
+
+    <!-- Validate Kernel build exists -->
+    <Error Text="MISA Kernel executable not found. Build the core components first."
+           Condition="!Exists('..\..\..\core\target\x86_64-pc-windows-msvc\release\misa-kernel.exe')" />
+
+    <!-- Copy model files if they exist -->
+    <ItemGroup>
+      <ModelFiles Include="..\..\..\core\models\*.gguf" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ModelFiles)"
+          DestinationFolder="$(OutputPath)models\"
+          SkipUnchangedFiles="true"
+          Condition=" '@(ModelFiles)' != '' " />
+  </Target>
+
+  <Target Name="AfterBuild">
+    <!-- Generate Windows service registration script -->
+    <WriteLinesToFile File="$(OutputPath)register-service.bat" Lines="
+@echo off
+echo Installing MISA Kernel service...
+sc create MisaKernel binPath=&quot;$(TargetPath)&quot; start= auto
+sc description MisaKernel &quot;MISA.AI Kernel Service - AI Assistant Background Service&quot;
+sc start MisaKernel
+echo Service installed and started successfully.
+pause
+" Overwrite="true" />
+
+    <!-- Generate Windows service removal script -->
+    <WriteLinesToFile File="$(OutputPath)unregister-service.bat" Lines="
+@echo off
+echo Stopping and removing MISA Kernel service...
+sc stop MisaKernel
+sc delete MisaKernel
+echo Service removed successfully.
+pause
+" Overwrite="true" />
+
+    <!-- Copy license files -->
+    <Copy SourceFiles="..\..\..\LICENSE" DestinationFolder="$(OutputPath)" />
+    <Copy SourceFiles="..\..\..\README.md" DestinationFolder="$(OutputPath)" />
+  </Target>
+
+  <!-- Clean Target -->
+  <Target Name="Clean">
+    <RemoveDir Directories="$(OutputPath)" />
+  </Target>
+
+  <!-- Rebuild Target -->
+  <Target Name="Rebuild" DependsOnTargets="Clean;Build" />
+
+</Project>

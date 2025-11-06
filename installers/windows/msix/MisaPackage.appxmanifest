@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+         xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+         xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+         xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+         xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+         xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10">
+
+  <Identity Name="MisaAI"
+            Publisher="CN=MisaAI Team, O=MisaAI, L=San Francisco, S=California, C=US"
+            Version="1.0.0.0"
+            ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>MISA.AI - Privacy-First AI Assistant</DisplayName>
+    <PublisherDisplayName>MisaAI Team</Publisher>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <Description>MISA.AI is a hybrid local/cloud intelligent assistant platform delivering privacy-first AI capabilities. Run Ollama models locally, sync across devices, and maintain complete control over your data.</Description>
+    <HomepageUri>https://misa.ai</HomepageUri>
+    <SupportUri>https://support.misa.ai</SupportUri>
+    <MarketetingInfo>
+      <MarketingInformation>
+        <Keywords>AI,Assistant,Privacy,Local,Ollama,Machine Learning</Keywords>
+        <DescriptionShort>Privacy-first AI assistant with local models</DescriptionShort>
+      </MarketingInformation>
+    </MarketetingInfo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.19041.0" MaxVersionTested="10.0.22621.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.22621.0" />
+    <PackageDependency Name="Microsoft.VCLibs.140.00.UWPDesktop" MinVersion="14.0.29231.0" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" />
+    <PackageDependency Name="Microsoft.WebView2" MinVersion="1.0.0.0" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us"/>
+    <Resource uap:Scale="100"/>
+    <Resource uap:Scale="125"/>
+    <Resource uap:Scale="150"/>
+    <Resource uap:Scale="200"/>
+    <Resource uap:Scale="400"/>
+  </Resources>
+
+  <Applications>
+    <Application Id="MisaApp" Executable="MisaAI.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements DisplayName="MISA.AI"
+                         Square150x150Logo="Assets\Square150x150Logo.png"
+                         Square44x44Logo="Assets\Square44x44Logo.png"
+                         Description="Privacy-first AI assistant with local models"
+                         BackgroundColor="transparent"
+                         AppListEntry="default">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"
+                        Square71x71Logo="Assets\SmallTile.png"
+                        Square310x310Logo="Assets\LargeTile.png">
+          <uap:ShowNameOnTiles>
+            <uap:ShowOn Tile="square150x150Logo"/>
+            <uap:ShowOn Tile="wide310x150Logo"/>
+            <uap:ShowOn Tile="square310x310Logo"/>
+          </uap:ShowNameOnTiles>
+        </uap:DefaultTile>
+        <uap:SplashScreen Image="Assets\SplashScreen.png"/>
+        <uap:InitialRotationPreference>
+          <uap:Rotation Preference="portrait"/>
+          <uap:Rotation Preference="landscape"/>
+          <uap:Rotation Preference="portraitFlipped"/>
+          <uap:Rotation Preference="landscapeFlipped"/>
+        </uap:InitialRotationPreference>
+      </uap:VisualElements>
+
+      <Extensions>
+        <!-- Windows Service Registration -->
+        <desktop:Extension Category="windows.service">
+          <desktop:Service Name="MisaKernel"
+                          Executable="MisaKernel.exe"
+                          EntryPoint="Windows.FullTrustApplication"
+                          StartType="auto"
+                          Account="localSystem">
+            <desktop:Dependencies>
+              <desktop:Dependency Name="Docker.Desktop"/>
+            </desktop:Dependencies>
+          </desktop:Service>
+        </desktop:Extension>
+
+        <!-- File Type Associations -->
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="misa-notes" DesiredView="default">
+            <uap:SupportedFileTypes>
+              <uap:FileType>.misanotes</uap:FileType>
+              <uap:FileType>.misachat</uap:FileType>
+              <uap:FileType>.misamodel</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+
+        <!-- Protocol Handlers -->
+        <uap:Extension Category="windows.protocol">
+          <uap:Protocol Name="misa">
+            <uap:DisplayName>MISA.AI Protocol</uap:DisplayName>
+          </uap:Protocol>
+        </uap:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <!-- Network Access -->
+    <Capability Name="privateNetworkClientServer"/>
+    <Capability Name="internetClient"/>
+    <Capability Name="internetClientServer"/>
+
+    <!-- File System Access -->
+    <uap:Capability Name="documentsLibrary"/>
+    <uap:Capability Name="picturesLibrary"/>
+    <uap:Capability Name="videosLibrary"/>
+    <uap:Capability Name="musicLibrary"/>
+
+    <!-- Extended Capabilities (requires restricted capabilities) -->
+    <rescap:Capability Name="runFullTrust"/>
+    <rescap:Capability Name="enterpriseAuthentication"/>
+    <rescap:Capability Name="virtualization"/>
+
+    <!-- Device Access -->
+    <DeviceCapability Name="microphone"/>
+    <DeviceCapability Name="webcam"/>
+    <DeviceCapability Name="location"/>
+
+    <!-- Background Execution -->
+    <BackgroundTasks>
+      <Task Type="systemEvent"/>
+      <Task Type="timer"/>
+      <Task Type="pushNotification"/>
+    </BackgroundTasks>
+  </Capabilities>
+
+  <!-- Package Install Actions -->
+  <InstallActions>
+    <InstallAction Name="Prerequisites" Content="scripts\install-prereqs.ps1"/>
+    <InstallAction Name="Dependencies" Content="scripts\install-dependencies.ps1"/>
+    <InstallAction Name="Configuration" Content="scripts\configure-app.ps1"/>
+  </InstallActions>
+
+  <!-- Package Update Actions -->
+  <UpdateActions>
+    <UpdateAction Name="Backup" Content="scripts\backup-settings.ps1"/>
+    <UpdateAction Name="Update" Content="scripts\update-app.ps1"/>
+    <UpdateAction Name="Restore" Content="scripts\restore-settings.ps1"/>
+  </UpdateActions>
+
+  <!-- Package Uninstall Actions -->
+  <UninstallActions>
+    <UninstallAction Name="Cleanup" Content="scripts\uninstall-cleanup.ps1"/>
+    <UninstallAction Name="Backup" Content="scripts\backup-data.ps1"/>
+  </UninstallActions>
+
+</Package>
