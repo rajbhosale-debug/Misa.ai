@@ -1190,7 +1190,8 @@ impl ClipboardSync {
         let clipboard_content = Self::get_clipboard_content().await?;
 
         // Calculate hash of current content
-        let content_hash = format!("{:x}", md5::compute(clipboard_content.as_bytes()));
+        let digest = compute_md5(clipboard_content.as_bytes());
+        let content_hash = format!("{:02x?}", digest);
 
         // Check if content has changed
         {
