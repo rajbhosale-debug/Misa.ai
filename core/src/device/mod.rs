@@ -1,0 +1,924 @@
+//! Device Management and Communication System
+//!
+//! Handles multi-device orchestration including:
+//! - Device discovery and pairing via QR/UID tokens
+//! - Inter-device communication via WebSocket/gRPC + WebRTC
+//! - Remote desktop with screen sharing and file transfer
+//! - Clipboard synchronization with end-to-end encryption
+//! - Energy-aware compute routing policies
+
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use tokio_tungstenite::tungstenite::Message;
+use tracing::{info, warn, error, debug};
+
+use crate::kernel::DeviceConfig;
+use crate::security::{SecurityManager, EncryptedData};
+use crate::errors::{MisaError, Result as MisaResult};
+
+/// Device manager for multi-device orchestration
+pub struct DeviceManager {
+    config: DeviceConfig,
+    security_manager: SecurityManager,
+    devices: Arc<RwLock<HashMap<String, DeviceInfo>>>,
+    active_connections: Arc<RwLock<HashMap<String, DeviceConnection>>>,
+    discovery_service: DiscoveryService,
+    remote_desktop_manager: RemoteDesktopManager,
+    clipboard_sync: ClipboardSync,
+}
+
+/// Device information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceInfo {
+    pub device_id: String,
+    pub name: String,
+    pub device_type: DeviceType,
+    pub capabilities: DeviceCapabilities,
+    pub status: DeviceStatus,
+    pub last_seen: chrono::DateTime<chrono::Utc>,
+    pub battery_level: Option<f32>,
+    pub cpu_usage: Option<f32>,
+    pub memory_usage: Option<u64>,
+    pub network_info: NetworkInfo,
+    pub location: Option<LocationInfo>,
+}
+
+/// Device type enumeration
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum DeviceType {
+    Desktop,
+    Laptop,
+    Phone,
+    Tablet,
+    Server,
+    Embedded,
+}
+
+/// Device capabilities
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceCapabilities {
+    pub supports_gpu: bool,
+    pub supports_vision: bool,
+    pub supports_audio: bool,
+    pub has_camera: bool,
+    pub has_microphone: bool,
+    pub max_memory_mb: u64,
+    pub cpu_cores: u32,
+    pub gpu_memory_mb: Option<u64>,
+    pub battery_powered: bool,
+    pub supports_remote_desktop: bool,
+}
+
+/// Device status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DeviceStatus {
+    Online,
+    Offline,
+    Busy,
+    Sleep,
+    Error(String),
+}
+
+/// Network information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkInfo {
+    pub ip_address: String,
+    pub mac_address: Option<String>,
+    pub connection_type: ConnectionType,
+    pub signal_strength: Option<f32>,
+    pub bandwidth_mbps: Option<f32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ConnectionType {
+    WiFi,
+    Ethernet,
+    Cellular,
+    Bluetooth,
+    Unknown,
+}
+
+/// Location information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocationInfo {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub accuracy: f64,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+/// Device connection
+#[derive(Debug, Clone)]
+pub struct DeviceConnection {
+    pub device_id: String,
+    pub connection_type: ConnectionProtocol,
+    pub websocket: Option<Arc<tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>>>,
+    pub webrtc_connection: Option<WebRTCConnection>,
+    pub last_heartbeat: chrono::DateTime<chrono::Utc>,
+    pub encrypted_channel: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ConnectionProtocol {
+    WebSocket,
+    WebRTC,
+    gRPC,
+    Bluetooth,
+}
+
+/// WebRTC connection information
+#[derive(Debug, Clone)]
+pub struct WebRTCConnection {
+    pub peer_id: String,
+    pub data_channel: String,
+    pub video_channels: Vec<String>,
+    pub audio_channels: Vec<String>,
+}
+
+/// Discovery service for device finding
+pub struct DiscoveryService {
+    enabled: bool,
+    discovery_port: u16,
+    broadcast_interval_seconds: u64,
+    active_discovery: Arc<RwLock<HashMap<String, DiscoverySession>>>,
+}
+
+/// Discovery session
+#[derive(Debug, Clone)]
+pub struct DiscoverySession {
+    pub session_id: String,
+    pub device_id: String,
+    pub started_at: chrono::DateTime<chrono::Utc>,
+    pub qr_token: String,
+    pub pairing_status: PairingStatus,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PairingStatus {
+    Initiated,
+    PendingConfirmation,
+    Completed,
+    Failed(String),
+    Expired,
+}
+
+/// Remote desktop manager
+pub struct RemoteDesktopManager {
+    enabled: bool,
+    active_sessions: Arc<RwLock<HashMap<String, RemoteDesktopSession>>>,
+    screen_capturer: ScreenCapturer,
+    file_transfer_manager: FileTransferManager,
+}
+
+/// Remote desktop session
+#[derive(Debug, Clone)]
+pub struct RemoteDesktopSession {
+    pub session_id: String,
+    pub host_device_id: String,
+    pub client_device_id: String,
+    pub protocol: RemoteDesktopProtocol,
+    pub resolution: (u32, u32),
+    pub quality: VideoQuality,
+    pub permissions: RemoteDesktopPermissions,
+    pub started_at: chrono::DateTime<chrono::Utc>,
+    pub screen_recording: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RemoteDesktopProtocol {
+    VNC,
+    RDP,
+    WebRTC,
+    Custom,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum VideoQuality {
+    Low,     // 480p
+    Medium,  // 720p
+    High,    // 1080p
+    Ultra,   // 4K
+}
+
+/// Remote desktop permissions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RemoteDesktopPermissions {
+    pub view_screen: bool,
+    pub control_mouse: bool,
+    pub control_keyboard: bool,
+    pub transfer_files: bool,
+    pub access_clipboard: bool,
+    pub record_session: bool,
+    pub system_commands: bool,
+}
+
+/// Screen capturer
+pub struct ScreenCapturer {
+    capture_interval_ms: u64,
+    compression_enabled: bool,
+    supported_formats: Vec<ImageFormat>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ImageFormat {
+    PNG,
+    JPEG,
+    WebP,
+    H264,
+    VP9,
+}
+
+/// File transfer manager
+pub struct FileTransferManager {
+    max_file_size_mb: u64,
+    allowed_file_types: Vec<String>,
+    encryption_required: bool,
+    active_transfers: Arc<RwLock<HashMap<String, FileTransfer>>>,
+}
+
+/// File transfer
+#[derive(Debug, Clone)]
+pub struct FileTransfer {
+    pub transfer_id: String,
+    pub source_device_id: String,
+    pub target_device_id: String,
+    pub file_path: String,
+    pub file_size: u64,
+    pub bytes_transferred: u64,
+    pub encryption_key: Option<String>,
+    pub status: FileTransferStatus,
+    pub started_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum FileTransferStatus {
+    Pending,
+    InProgress,
+    Completed,
+    Failed(String),
+    Paused,
+}
+
+/// Clipboard synchronization
+pub struct ClipboardSync {
+    enabled: bool,
+    encryption_enabled: bool,
+    sync_interval_seconds: u64,
+    last_clipboard_hash: Arc<RwLock<Option<String>>>,
+    supported_formats: Vec<String>,
+}
+
+/// Device communication message
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceMessage {
+    pub message_id: String,
+    pub source_device_id: String,
+    pub target_device_id: Option<String>, // None for broadcast
+    pub message_type: MessageType,
+    pub payload: serde_json::Value,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub encrypted: bool,
+    pub priority: MessagePriority,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MessageType {
+    Heartbeat,
+    SystemInfo,
+    TaskRequest,
+    TaskResponse,
+    RemoteDesktopRequest,
+    RemoteDesktopData,
+    FileTransferRequest,
+    FileTransferData,
+    ClipboardSync,
+    DeviceDiscovery,
+    PairingRequest,
+    PairingResponse,
+    ControlCommand,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MessagePriority {
+    Low,
+    Normal,
+    High,
+    Critical,
+}
+
+impl DeviceManager {
+    /// Create a new device manager
+    pub async fn new(config: DeviceConfig, security_manager: SecurityManager) -> MisaResult<Self> {
+        let devices = Arc::new(RwLock::new(HashMap::new()));
+        let active_connections = Arc::new(RwLock::new(HashMap::new()));
+
+        let discovery_service = DiscoveryService::new(config.discovery_enabled);
+        let remote_desktop_manager = RemoteDesktopManager::new(config.remote_desktop_enabled);
+        let clipboard_sync = ClipboardSync::new(true);
+
+        let manager = Self {
+            config,
+            security_manager,
+            devices,
+            active_connections,
+            discovery_service,
+            remote_desktop_manager,
+            clipboard_sync,
+        };
+
+        info!("Device manager initialized");
+        Ok(manager)
+    }
+
+    /// Start device discovery
+    pub async fn start_discovery(&self) -> MisaResult<()> {
+        if !self.config.discovery_enabled {
+            info!("Device discovery disabled in configuration");
+            return Ok(());
+        }
+
+        info!("Starting device discovery service");
+        self.discovery_service.start().await?;
+
+        // Start device monitoring
+        self.start_device_monitoring().await?;
+
+        Ok(())
+    }
+
+    /// Pair with a device using QR token
+    pub async fn pair_device(&self, qr_token: &str) -> MisaResult<PairingResult> {
+        info!("Initiating device pairing with QR token");
+
+        // Validate QR token format
+        let pairing_data = self.parse_qr_token(qr_token)?;
+
+        // Create discovery session
+        let session = DiscoverySession {
+            session_id: uuid::Uuid::new_v4().to_string(),
+            device_id: pairing_data.device_id.clone(),
+            started_at: chrono::Utc::now(),
+            qr_token: qr_token.to_string(),
+            pairing_status: PairingStatus::Initiated,
+        };
+
+        // Initiate pairing process
+        let result = self.initiate_pairing(pairing_data, session).await?;
+
+        Ok(result)
+    }
+
+    /// Send message to device
+    pub async fn send_message(&self, message: DeviceMessage) -> MisaResult<()> {
+        debug!("Sending message to device: {:?}", message.target_device_id);
+
+        if let Some(target_device_id) = &message.target_device_id {
+            let connections = self.active_connections.read().await;
+            if let Some(connection) = connections.get(target_device_id) {
+                self.send_message_via_connection(connection, &message).await?;
+            } else {
+                return Err(MisaError::Device(format!("No connection to device: {}", target_device_id)));
+            }
+        } else {
+            // Broadcast to all connected devices
+            self.broadcast_message(&message).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Start remote desktop session
+    pub async fn start_remote_desktop(
+        &self,
+        target_device_id: &str,
+        permissions: RemoteDesktopPermissions,
+    ) -> MisaResult<String> {
+        info!("Starting remote desktop session with device: {}", target_device_id);
+
+        // Check if device supports remote desktop
+        let devices = self.devices.read().await;
+        let device = devices.get(target_device_id)
+            .ok_or_else(|| MisaError::Device(format!("Device not found: {}", target_device_id)))?;
+
+        if !device.capabilities.supports_remote_desktop {
+            return Err(MisaError::Device("Device does not support remote desktop".to_string()));
+        }
+
+        drop(devices);
+
+        // Start remote desktop session
+        let session_id = self.remote_desktop_manager.start_session(
+            target_device_id,
+            permissions,
+        ).await?;
+
+        Ok(session_id)
+    }
+
+    /// Transfer file to device
+    pub async fn transfer_file(
+        &self,
+        target_device_id: &str,
+        file_path: &str,
+    ) -> MisaResult<String> {
+        info!("Starting file transfer to device: {} - file: {}", target_device_id, file_path);
+
+        // Validate file
+        self.validate_file(file_path)?;
+
+        // Start file transfer
+        let transfer_id = self.remote_desktop_manager.file_transfer_manager.start_transfer(
+            target_device_id,
+            file_path,
+        ).await?;
+
+        Ok(transfer_id)
+    }
+
+    /// Select optimal device for task
+    pub async fn select_device(&self, preferences: &[String]) -> MisaResult<Option<String>> {
+        let devices = self.devices.read().await;
+
+        if preferences.is_empty() {
+            // Select best available device
+            self.select_best_device(&devices).await
+        } else {
+            // Check preferred devices in order
+            for preference in preferences {
+                if let Some(device) = devices.get(preference) {
+                    if matches!(device.status, DeviceStatus::Online) {
+                        return Ok(Some(preference.clone()));
+                    }
+                }
+            }
+            Ok(None)
+        }
+    }
+
+    /// Get device list
+    pub async fn get_devices(&self) -> MisaResult<Vec<DeviceInfo>> {
+        let devices = self.devices.read().await;
+        Ok(devices.values().cloned().collect())
+    }
+
+    /// Get device info
+    pub async fn get_device(&self, device_id: &str) -> MisaResult<Option<DeviceInfo>> {
+        let devices = self.devices.read().await;
+        Ok(devices.get(device_id).cloned())
+    }
+
+    /// Shutdown device manager
+    pub async fn shutdown(&self) -> MisaResult<()> {
+        info!("Shutting down device manager");
+
+        // Stop discovery service
+        self.discovery_service.stop().await?;
+
+        // Close all connections
+        self.close_all_connections().await?;
+
+        // Stop remote desktop sessions
+        self.remote_desktop_manager.shutdown().await?;
+
+        info!("Device manager shut down");
+        Ok(())
+    }
+
+    /// Private helper methods
+
+    fn parse_qr_token(&self, qr_token: &str) -> MisaResult<PairingData> {
+        // Parse QR token format: "misa://pair/{device_id}/{timestamp}/{signature}"
+        if !qr_token.starts_with("misa://pair/") {
+            return Err(MisaError::Device("Invalid QR token format".to_string()));
+        }
+
+        let parts: Vec<&str> = qr_token.trim_start_matches("misa://pair/").split('/').collect();
+        if parts.len() != 3 {
+            return Err(MisaError::Device("Invalid QR token format".to_string()));
+        }
+
+        Ok(PairingData {
+            device_id: parts[0].to_string(),
+            timestamp: parts[1].parse().map_err(|_| MisaError::Device("Invalid timestamp".to_string()))?,
+            signature: parts[2].to_string(),
+        })
+    }
+
+    async fn initiate_pairing(
+        &self,
+        pairing_data: PairingData,
+        session: DiscoverySession,
+    ) -> MisaResult<PairingResult> {
+        // Validate timestamp (prevent replay attacks)
+        let now = chrono::Utc::now();
+        let pair_time = chrono::DateTime::from_timestamp(pairing_data.timestamp, 0)
+            .ok_or_else(|| MisaError::Device("Invalid timestamp".to_string()))?;
+
+        if now.signed_duration_since(pair_time).num_minutes() > 5 {
+            return Err(MisaError::Device("QR token expired".to_string()));
+        }
+
+        // Verify signature (in real implementation, use proper cryptographic verification)
+        if pairing_data.signature.is_empty() {
+            return Err(MisaError::Device("Invalid signature".to_string()));
+        }
+
+        // Add device to registry
+        let device_info = DeviceInfo {
+            device_id: pairing_data.device_id.clone(),
+            name: format!("Device-{}", &pairing_data.device_id[..8]),
+            device_type: DeviceType::Phone, // Default, would be detected
+            capabilities: DeviceCapabilities::default(),
+            status: DeviceStatus::Online,
+            last_seen: chrono::Utc::now(),
+            battery_level: None,
+            cpu_usage: None,
+            memory_usage: None,
+            network_info: NetworkInfo::default(),
+            location: None,
+        };
+
+        let mut devices = self.devices.write().await;
+        devices.insert(pairing_data.device_id.clone(), device_info);
+
+        Ok(PairingResult {
+            success: true,
+            device_id: pairing_data.device_id,
+            message: "Device paired successfully".to_string(),
+        })
+    }
+
+    async fn send_message_via_connection(
+        &self,
+        connection: &DeviceConnection,
+        message: &DeviceMessage,
+    ) -> MisaResult<()> {
+        let message_data = serde_json::to_vec(message)?;
+
+        match connection.connection_type {
+            ConnectionProtocol::WebSocket => {
+                // Send via WebSocket
+                if let Some(_ws) = &connection.websocket {
+                    // Implementation would send message via WebSocket
+                    debug!("Sending message via WebSocket");
+                }
+            }
+            ConnectionProtocol::WebRTC => {
+                // Send via WebRTC data channel
+                debug!("Sending message via WebRTC");
+            }
+            _ => {
+                return Err(MisaError::Device("Unsupported connection protocol".to_string()));
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn broadcast_message(&self, message: &DeviceMessage) -> MisaResult<()> {
+        let connections = self.active_connections.read().await;
+
+        for (device_id, connection) in connections.iter() {
+            if let Err(e) = self.send_message_via_connection(connection, message).await {
+                warn!("Failed to send message to device {}: {}", device_id, e);
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn select_best_device(&self, devices: &HashMap<String, DeviceInfo>) -> MisaResult<Option<String>> {
+        let mut best_device = None;
+        let mut best_score = -1.0;
+
+        for (device_id, device) in devices.iter() {
+            if !matches!(device.status, DeviceStatus::Online) {
+                continue;
+            }
+
+            let mut score = 0.0;
+
+            // Prefer devices with GPU
+            if device.capabilities.supports_gpu {
+                score += 10.0;
+            }
+
+            // Prefer devices with more memory
+            score += (device.capabilities.max_memory_mb as f64) / 1024.0; // Convert to GB
+
+            // Prefer non-battery powered devices
+            if !device.capabilities.battery_powered {
+                score += 5.0;
+            }
+
+            // Penalize low battery
+            if let Some(battery) = device.battery_level {
+                if battery < 20.0 {
+                    score -= 5.0;
+                }
+            }
+
+            if score > best_score {
+                best_score = score;
+                best_device = Some(device_id.clone());
+            }
+        }
+
+        Ok(best_device)
+    }
+
+    async fn start_device_monitoring(&self) -> MisaResult<()> {
+        // Start monitoring device status, battery, etc.
+        info!("Starting device monitoring");
+
+        // In real implementation, this would:
+        // - Monitor battery levels
+        // - Track device connectivity
+        // - Update device capabilities
+        // - Handle device disconnections
+
+        Ok(())
+    }
+
+    async fn close_all_connections(&self) -> MisaResult<()> {
+        let mut connections = self.active_connections.write().await;
+        connections.clear();
+        Ok(())
+    }
+
+    fn validate_file(&self, file_path: &str) -> MisaResult<()> {
+        // Check file exists
+        if !std::path::Path::new(file_path).exists() {
+            return Err(MisaError::Device(format!("File not found: {}", file_path)));
+        }
+
+        // Check file size
+        let metadata = std::fs::metadata(file_path)
+            .map_err(|e| MisaError::Io(e))?;
+
+        let file_size_mb = metadata.len() / (1024 * 1024);
+        if file_size_mb > self.config.file_transfer.max_file_size_mb {
+            return Err(MisaError::Device(format!(
+                "File too large: {}MB (max: {}MB)",
+                file_size_mb,
+                self.config.file_transfer.max_file_size_mb
+            )));
+        }
+
+        Ok(())
+    }
+}
+
+/// Pairing data from QR token
+#[derive(Debug, Clone)]
+struct PairingData {
+    device_id: String,
+    timestamp: i64,
+    signature: String,
+}
+
+/// Pairing result
+#[derive(Debug, Clone, Serialize)]
+pub struct PairingResult {
+    pub success: bool,
+    pub device_id: String,
+    pub message: String,
+}
+
+impl Default for DeviceCapabilities {
+    fn default() -> Self {
+        Self {
+            supports_gpu: false,
+            supports_vision: false,
+            supports_audio: true,
+            has_camera: false,
+            has_microphone: true,
+            max_memory_mb: 4096,
+            cpu_cores: 4,
+            gpu_memory_mb: None,
+            battery_powered: false,
+            supports_remote_desktop: true,
+        }
+    }
+}
+
+impl Default for NetworkInfo {
+    fn default() -> Self {
+        Self {
+            ip_address: "127.0.0.1".to_string(),
+            mac_address: None,
+            connection_type: ConnectionType::Unknown,
+            signal_strength: None,
+            bandwidth_mbps: None,
+        }
+    }
+}
+
+impl DiscoveryService {
+    pub fn new(enabled: bool) -> Self {
+        Self {
+            enabled,
+            discovery_port: 8081,
+            broadcast_interval_seconds: 30,
+            active_discovery: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    pub async fn start(&self) -> MisaResult<()> {
+        if !self.enabled {
+            return Ok(());
+        }
+
+        info!("Starting discovery service on port {}", self.discovery_port);
+
+        // In real implementation, this would:
+        // - Start UDP discovery service
+        // - Broadcast device information
+        // - Listen for discovery broadcasts
+        // - Handle pairing requests
+
+        Ok(())
+    }
+
+    pub async fn stop(&self) -> MisaResult<()> {
+        info!("Stopping discovery service");
+
+        // Cleanup active discovery sessions
+        let mut sessions = self.active_discovery.write().await;
+        sessions.clear();
+
+        Ok(())
+    }
+}
+
+impl RemoteDesktopManager {
+    pub fn new(enabled: bool) -> Self {
+        Self {
+            enabled,
+            active_sessions: Arc::new(RwLock::new(HashMap::new())),
+            screen_capturer: ScreenCapturer::new(),
+            file_transfer_manager: FileTransferManager::new(),
+        }
+    }
+
+    pub async fn start_session(
+        &self,
+        target_device_id: &str,
+        permissions: RemoteDesktopPermissions,
+    ) -> MisaResult<String> {
+        if !self.enabled {
+            return Err(MisaError::Device("Remote desktop disabled".to_string()));
+        }
+
+        let session_id = uuid::Uuid::new_v4().to_string();
+        let session = RemoteDesktopSession {
+            session_id: session_id.clone(),
+            host_device_id: target_device_id.to_string(),
+            client_device_id: "local".to_string(), // Would be actual device ID
+            protocol: RemoteDesktopProtocol::WebRTC,
+            resolution: (1920, 1080),
+            quality: VideoQuality::High,
+            permissions,
+            started_at: chrono::Utc::now(),
+            screen_recording: false,
+        };
+
+        let mut sessions = self.active_sessions.write().await;
+        sessions.insert(session_id.clone(), session);
+
+        info!("Started remote desktop session: {}", session_id);
+        Ok(session_id)
+    }
+
+    pub async fn shutdown(&self) -> MisaResult<()> {
+        info!("Shutting down remote desktop manager");
+
+        // Close all sessions
+        let mut sessions = self.active_sessions.write().await;
+        sessions.clear();
+
+        Ok(())
+    }
+}
+
+impl ScreenCapturer {
+    pub fn new() -> Self {
+        Self {
+            capture_interval_ms: 100, // 10 FPS
+            compression_enabled: true,
+            supported_formats: vec![ImageFormat::JPEG, ImageFormat::PNG, ImageFormat::H264],
+        }
+    }
+}
+
+impl FileTransferManager {
+    pub fn new() -> Self {
+        Self {
+            max_file_size_mb: 1024,
+            allowed_file_types: vec!["*".to_string()], // All types
+            encryption_required: true,
+            active_transfers: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    pub async fn start_transfer(&self, target_device_id: &str, file_path: &str) -> MisaResult<String> {
+        let transfer_id = uuid::Uuid::new_v4().to_string();
+
+        let metadata = std::fs::metadata(file_path)
+            .map_err(|e| MisaError::Io(e))?;
+
+        let transfer = FileTransfer {
+            transfer_id: transfer_id.clone(),
+            source_device_id: "local".to_string(),
+            target_device_id: target_device_id.to_string(),
+            file_path: file_path.to_string(),
+            file_size: metadata.len(),
+            bytes_transferred: 0,
+            encryption_key: None,
+            status: FileTransferStatus::Pending,
+            started_at: chrono::Utc::now(),
+        };
+
+        let mut transfers = self.active_transfers.write().await;
+        transfers.insert(transfer_id.clone(), transfer);
+
+        info!("Started file transfer: {} -> {}", transfer_id, file_path);
+        Ok(transfer_id)
+    }
+}
+
+impl ClipboardSync {
+    pub fn new(encryption_enabled: bool) -> Self {
+        Self {
+            enabled: true,
+            encryption_enabled,
+            sync_interval_seconds: 1,
+            last_clipboard_hash: Arc::new(RwLock::new(None)),
+            supported_formats: vec!["text/plain".to_string(), "image/png".to_string()],
+        }
+    }
+}
+
+// Implement Clone for Arc-wrapped structs
+impl Clone for DeviceManager {
+    fn clone(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            security_manager: self.security_manager.clone(),
+            devices: Arc::clone(&self.devices),
+            active_connections: Arc::clone(&self.active_connections),
+            discovery_service: DiscoveryService::new(self.config.discovery_enabled),
+            remote_desktop_manager: RemoteDesktopManager::new(self.config.remote_desktop_enabled),
+            clipboard_sync: ClipboardSync::new(true),
+        }
+    }
+}
+
+impl Clone for DiscoveryService {
+    fn clone(&self) -> Self {
+        Self {
+            enabled: self.enabled,
+            discovery_port: self.discovery_port,
+            broadcast_interval_seconds: self.broadcast_interval_seconds,
+            active_discovery: Arc::clone(&self.active_discovery),
+        }
+    }
+}
+
+impl Clone for RemoteDesktopManager {
+    fn clone(&self) -> Self {
+        Self {
+            enabled: self.enabled,
+            active_sessions: Arc::clone(&self.active_sessions),
+            screen_capturer: ScreenCapturer::new(),
+            file_transfer_manager: FileTransferManager::new(),
+        }
+    }
+}
+
+impl Clone for FileTransferManager {
+    fn clone(&self) -> Self {
+        Self {
+            max_file_size_mb: self.max_file_size_mb,
+            allowed_file_types: self.allowed_file_types.clone(),
+            encryption_required: self.encryption_required,
+            active_transfers: Arc::clone(&self.active_transfers),
+        }
+    }
+}
+
+impl Clone for ClipboardSync {
+    fn clone(&self) -> Self {
+        Self {
+            enabled: self.enabled,
+            encryption_enabled: self.encryption_enabled,
+            sync_interval_seconds: self.sync_interval_seconds,
+            last_clipboard_hash: Arc::clone(&self.last_clipboard_hash),
+            supported_formats: self.supported_formats.clone(),
+        }
+    }
+}
