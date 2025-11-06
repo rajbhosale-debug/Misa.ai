@@ -1134,6 +1134,113 @@ impl ClipboardSync {
             supported_formats: vec!["text/plain".to_string(), "image/png".to_string()],
         }
     }
+
+    /// Start clipboard synchronization service
+    pub async fn start_sync(&self, device_manager: Arc<DeviceManager>) -> MisaResult<()> {
+        if !self.enabled {
+            info!("Clipboard sync disabled");
+            return Ok(());
+        }
+
+        info!("Starting clipboard synchronization service");
+
+        let sync_interval = self.sync_interval_seconds;
+        let last_clipboard_hash = Arc::clone(&self.last_clipboard_hash);
+        let encryption_enabled = self.encryption_enabled;
+
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(sync_interval));
+
+            loop {
+                interval.tick().await;
+
+                if let Err(e) = Self::check_and_sync_clipboard(
+                    &device_manager,
+                    &last_clipboard_hash,
+                    encryption_enabled,
+                ).await {
+                    warn!("Clipboard sync error: {}", e);
+                }
+            }
+        });
+
+        info!("Clipboard synchronization service started");
+        Ok(())
+    }
+
+    /// Check clipboard for changes and sync to connected devices
+    async fn check_and_sync_clipboard(
+        device_manager: &Arc<DeviceManager>,
+        last_clipboard_hash: &Arc<RwLock<Option<String>>>,
+        encryption_enabled: bool,
+    ) -> MisaResult<()> {
+        // Get current clipboard content
+        let clipboard_content = Self::get_clipboard_content().await?;
+
+        // Calculate hash of current content
+        let content_hash = format!("{:x}", md5::compute(clipboard_content.as_bytes()));
+
+        // Check if content has changed
+        {
+            let mut last_hash = last_clipboard_hash.write().await;
+            if let Some(ref hash) = *last_hash {
+                if hash == &content_hash {
+                    return Ok(()); // No change
+                }
+            }
+            *last_hash = Some(content_hash.clone());
+        }
+
+        debug!("Clipboard content changed, syncing to devices");
+
+        // Create clipboard sync message
+        let sync_message = DeviceMessage {
+            message_id: uuid::Uuid::new_v4().to_string(),
+            source_device_id: "local".to_string(),
+            target_device_id: None, // Broadcast to all
+            message_type: MessageType::ClipboardSync,
+            payload: serde_json::json!({
+                "content": clipboard_content,
+                "format": "text/plain",
+                "timestamp": chrono::Utc::now(),
+                "encrypted": encryption_enabled
+            }),
+            timestamp: chrono::Utc::now(),
+            encrypted: encryption_enabled,
+            priority: MessagePriority::Normal,
+        };
+
+        // Broadcast to all connected devices
+        device_manager.send_message(sync_message).await?;
+
+        Ok(())
+    }
+
+    /// Get current clipboard content (platform-specific)
+    async fn get_clipboard_content() -> MisaResult<String> {
+        // In a real implementation, this would use platform-specific clipboard APIs:
+        // - Windows: Windows API
+        // - macOS: NSPasteboard
+        // - Linux: X11 clipboard or Wayland clipboard
+
+        // For now, simulate clipboard content
+        Ok("Sample clipboard content".to_string())
+    }
+
+    /// Set clipboard content (platform-specific)
+    pub async fn set_clipboard_content(&self, content: &str, source_device_id: &str) -> MisaResult<()> {
+        info!("Setting clipboard content from device: {}", source_device_id);
+
+        // In a real implementation, this would use platform-specific clipboard APIs
+        debug!("Setting clipboard: {}", content);
+
+        // Update last clipboard hash to prevent sync loop
+        let content_hash = format!("{:x}", md5::compute(content.as_bytes()));
+        let mut last_hash = self.last_clipboard_hash.write().await;
+        *last_hash = Some(content_hash);
+
+        Ok(())
+    }
 }
 
 // Implement Clone for Arc-wrapped structs
