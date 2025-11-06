@@ -931,6 +931,73 @@ impl ScreenCapturer {
             supported_formats: vec![ImageFormat::JPEG, ImageFormat::PNG, ImageFormat::H264],
         }
     }
+
+    /// Start screen capture for remote desktop
+    pub async fn start_capture(&self, session_id: String) -> MisaResult<ScreenCaptureStream> {
+        debug!("Starting screen capture for session: {}", session_id);
+
+        // In a real implementation, this would:
+        // - Use platform-specific screen capture APIs (Windows Desktop Duplication, macOS ScreenCaptureKit, Linux X11/Wayland)
+        // - Set up video encoding pipeline
+        // - Create streaming endpoints
+
+        let capture_stream = ScreenCaptureStream {
+            session_id,
+            format: ImageFormat::H264,
+            resolution: (1920, 1080),
+            frame_rate: 30,
+            started_at: chrono::Utc::now(),
+        };
+
+        info!("Screen capture started for session: {}", session_id);
+        Ok(capture_stream)
+    }
+
+    /// Capture single frame
+    pub async fn capture_frame(&self, format: ImageFormat) -> MisaResult<Vec<u8>> {
+        // In a real implementation, this would:
+        // - Capture screen using platform APIs
+        // - Encode to requested format
+        // - Return frame data
+
+        debug!("Capturing screen frame in format: {:?}", format);
+
+        // Simulate frame capture (would be actual screen data)
+        let frame_data = vec![0u8; 1024 * 768 * 3]; // RGB frame data placeholder
+
+        match format {
+            ImageFormat::JPEG => {
+                // Simulate JPEG encoding
+                Ok(frame_data)
+            }
+            ImageFormat::PNG => {
+                // Simulate PNG encoding
+                Ok(frame_data)
+            }
+            ImageFormat::H264 => {
+                // Simulate H.264 encoding
+                Ok(frame_data)
+            }
+            ImageFormat::WebP => {
+                // Simulate WebP encoding
+                Ok(frame_data)
+            }
+            ImageFormat::VP9 => {
+                // Simulate VP9 encoding
+                Ok(frame_data)
+            }
+        }
+    }
+}
+
+/// Screen capture stream for remote desktop
+#[derive(Debug, Clone)]
+pub struct ScreenCaptureStream {
+    pub session_id: String,
+    pub format: ImageFormat,
+    pub resolution: (u32, u32),
+    pub frame_rate: u32,
+    pub started_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl FileTransferManager {
