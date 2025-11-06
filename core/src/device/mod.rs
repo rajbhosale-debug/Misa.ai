@@ -750,7 +750,7 @@ impl DiscoveryService {
         // Start UDP discovery service
         let udp_socket = tokio::net::UdpSocket::bind(("0.0.0.0", self.discovery_port))
             .await
-            .map_err(|e| MisaError::Network(format!("Failed to bind UDP socket: {}", e)))?;
+            .map_err(|e| MisaError::Device(format!("Failed to bind UDP socket: {}", e)))?;
 
         let active_discovery = Arc::clone(&self.active_discovery);
         let broadcast_interval = self.broadcast_interval_seconds;
