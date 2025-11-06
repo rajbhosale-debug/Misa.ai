@@ -69,6 +69,11 @@ detect_platform() {
     case "$OS" in
         Linux*)
             PLATFORM="linux"
+            # Check for Windows native environment
+            if [ -f /proc/version ] && grep -qi "microsoft\|wsl" /proc/version; then
+                PLATFORM="wsl"
+                print_info "WSL environment detected. Windows native coordination available."
+            fi
             ;;
         Darwin*)
             PLATFORM="macos"
