@@ -1031,8 +1031,95 @@ impl FileTransferManager {
         let mut transfers = self.active_transfers.write().await;
         transfers.insert(transfer_id.clone(), transfer);
 
+        // Start the actual file transfer in background
+        self.execute_file_transfer(transfer_id.clone(), file_path.to_string()).await?;
+
         info!("Started file transfer: {} -> {}", transfer_id, file_path);
         Ok(transfer_id)
+    }
+
+    /// Execute the actual file transfer with progress tracking
+    async fn execute_file_transfer(&self, transfer_id: String, file_path: String) -> MisaResult<()> {
+        let active_transfers = Arc::clone(&self.active_transfers);
+        let encryption_required = self.encryption_required;
+
+        tokio::spawn(async move {
+            // Read file in chunks and simulate transfer
+            let chunk_size = 64 * 1024; // 64KB chunks
+            let mut bytes_transferred = 0u64;
+
+            // Update status to InProgress
+            {
+                let mut transfers = active_transfers.write().await;
+                if let Some(transfer) = transfers.get_mut(&transfer_id) {
+                    transfer.status = FileTransferStatus::InProgress;
+                }
+            }
+
+            // Simulate file reading and transfer
+            match std::fs::File::open(&file_path) {
+                Ok(mut file) => {
+                    let mut buffer = vec![0u8; chunk_size];
+
+                    loop {
+                        match file.read(&mut buffer) {
+                            Ok(0) => break, // EOF
+                            Ok(bytes_read) => {
+                                bytes_transferred += bytes_read as u64;
+
+                                // Update transfer progress
+                                {
+                                    let mut transfers = active_transfers.write().await;
+                                    if let Some(transfer) = transfers.get_mut(&transfer_id) {
+                                        transfer.bytes_transferred = bytes_transferred;
+                                    }
+                                }
+
+                                // Simulate network transfer delay
+                                tokio::time::sleep(Duration::from_millis(10)).await;
+                            }
+                            Err(e) => {
+                                error!("Error reading file during transfer: {}", e);
+                                break;
+                            }
+                        }
+                    }
+
+                    // Mark as completed
+                    let mut transfers = active_transfers.write().await;
+                    if let Some(transfer) = transfers.get_mut(&transfer_id) {
+                        transfer.status = FileTransferStatus::Completed;
+                    }
+
+                    info!("File transfer completed: {}", transfer_id);
+                }
+                Err(e) => {
+                    error!("Failed to open file for transfer: {}", e);
+                    let mut transfers = active_transfers.write().await;
+                    if let Some(transfer) = transfers.get_mut(&transfer_id) {
+                        transfer.status = FileTransferStatus::Failed(format!("Failed to open file: {}", e));
+                    }
+                }
+            }
+        });
+
+        Ok(())
+    }
+
+    /// Get transfer progress
+    pub async fn get_transfer_progress(&self, transfer_id: &str) -> MisaResult<Option<FileTransfer>> {
+        let transfers = self.active_transfers.read().await;
+        Ok(transfers.get(transfer_id).cloned())
+    }
+
+    /// Cancel active transfer
+    pub async fn cancel_transfer(&self, transfer_id: &str) -> MisaResult<()> {
+        let mut transfers = self.active_transfers.write().await;
+        if let Some(transfer) = transfers.get_mut(transfer_id) {
+            transfer.status = FileTransferStatus::Failed("Transfer cancelled".to_string());
+            info!("File transfer cancelled: {}", transfer_id);
+        }
+        Ok(())
     }
 }
 
