@@ -273,6 +273,17 @@ pub struct ClipboardSync {
     supported_formats: Vec<String>,
 }
 
+/// Device discovery packet for network broadcasting
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDiscoveryPacket {
+    pub device_id: String,
+    pub device_name: String,
+    pub device_type: String,
+    pub capabilities: Vec<String>,
+    pub port: u16,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+}
+
 /// Device communication message
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceMessage {
