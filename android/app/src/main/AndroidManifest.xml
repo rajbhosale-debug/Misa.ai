@@ -70,12 +70,31 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
 
-    <!-- Background work -->
+    <!-- Background work and device discovery -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- Enhanced background networking -->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
     <!-- App installation and updates -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
+    <uses-permission android:name="android.permission.ACCESS_DOWNLOAD_MANAGER" />
+
+    <!-- Wake lock and device management -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SYSTEM_OVERLAY_WINDOW" />
+
+    <!-- Widget permissions -->
+    <uses-permission android:name="android.permission.BIND_APPWIDGET" />
 
     <application
         android:name=".MisaApplication"
@@ -158,11 +177,47 @@
             android:enabled="true"
             android:exported="false" />
 
-        <!-- Device Discovery Service -->
+        <!-- Enhanced Device Discovery Service -->
         <service
             android:name=".services.DeviceDiscoveryService"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="location|dataSync" />
+
+        <!-- Background Model Download Service -->
+        <service
+            android:name=".services.ModelDownloadService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- System Tray Integration Service -->
+        <service
+            android:name=".services.SystemTrayService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- QR Code Scanning Service -->
+        <service
+            android:name=".services.QRScanningService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="camera" />
+
+        <!-- Auto-pairing Service -->
+        <service
+            android:name=".services.AutoPairingService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location|dataSync" />
+
+        <!-- Background Sync Service -->
+        <service
+            android:name=".services.BackgroundSyncService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- Voice Recognition Service -->
         <service
@@ -246,7 +301,26 @@
             </intent-filter>
         </receiver>
 
-        <!-- Meta-data -->
+        <!-- Home Screen Widgets -->
+        <receiver android:name=".widgets.MisaWidgetProvider"
+                  android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                       android:resource="@xml/misa_widget_info" />
+        </receiver>
+
+        <receiver android:name=".widgets.MisaQuickActionsWidget"
+                  android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                       android:resource="@xml/misa_quick_actions_widget_info" />
+        </receiver>
+
+        <!-- Enhanced Meta-data -->
         <meta-data
             android:name="com.google.ml.vision.DEPENDENCIES"
             android:value="ocr" />
@@ -254,6 +328,19 @@
         <!-- Security configurations -->
         <meta-data
             android:name="android.webkit.WebView.MetricsOptOut"
+            android:value="true" />
+
+        <!-- Express Setup Configuration -->
+        <meta-data
+            android:name="com.misa.ai.express_setup_enabled"
+            android:value="true" />
+
+        <meta-data
+            android:name="com.misa.ai.background_discovery_enabled"
+            android:value="true" />
+
+        <meta-data
+            android:name="com.misa.ai.auto_download_models"
             android:value="true" />
 
     </application>

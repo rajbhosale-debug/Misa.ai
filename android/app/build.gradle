@@ -25,6 +25,11 @@ android {
 
         buildConfigField "String", "KERNEL_URL", "\"http://10.0.2.2:8080\""
         buildConfigField "String", "API_VERSION", "\"v1\""
+        buildConfigField "boolean", "BACKGROUND_DISCOVERY_ENABLED", "true"
+        buildConfigField "boolean", "AUTO_DOWNLOAD_MODELS", "true"
+        buildConfigField "boolean", "AUTO_PERMISSION_REQUEST", "true"
+        buildConfigField "boolean", "SYSTEM_TRAY_ENABLED", "true"
+        buildConfigField "String", "DEFAULT_MODEL_URL", "\"https://models.misa.ai/mixtral-4x7b.gguf\""
     }
 
     buildTypes {
@@ -149,22 +154,60 @@ dependencies {
     // Security
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
 
-    // Work Manager
+    // Work Manager (Enhanced for background services)
     implementation 'androidx.work:work-runtime-ktx:2.9.0'
     implementation 'androidx.hilt:hilt-work:1.1.0'
 
-    // Calendar Integration
+    // Background Services and Foreground Services
+    implementation 'androidx.lifecycle:lifecycle-service:2.7.0'
+    implementation 'androidx.lifecycle:lifecycle-process:2.7.0'
+
+    // Enhanced Calendar Integration
     implementation 'androidx.calendar:calendar:1.0.0'
 
     // Email Integration
     implementation 'com.sun.mail:android-mail:1.6.7'
     implementation 'com.sun.mail:android-activation:1.6.7'
 
-    // Bluetooth
+    // Bluetooth (Enhanced)
     implementation 'androidx.bluetooth:bluetooth:1.0.0-alpha02'
 
     // NFC
     implementation 'androidx.nfc:nfc:1.0.0-alpha02'
+
+    // Background Download Manager
+    implementation 'androidx.work:work-multiprocess:2.9.0'
+
+    // QR Code Generation and Scanning
+    implementation 'com.google.zxing:core:3.5.2'
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+
+    // WebRTC for device communication
+    implementation 'org.webrtc:google-webrtc:1.0.32006'
+
+    // MQTT for background device discovery
+    implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5'
+    implementation 'org.eclipse.paho:org.eclipse.paho.android.service:1.1.1'
+
+    // COAP for lightweight device communication
+    implementation 'org.eclipse.californium:californium-core:3.0.0'
+
+    // Zeroconf for service discovery
+    implementation 'com.github.wultra:OnionMulticastDiscovery:1.0.0'
+
+    // Enhanced Notifications
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.media:media:1.7.0'
+
+    // Battery Optimization APIs
+    implementation 'androidx.work:work-gcm:2.9.0'
+
+    // System Integration
+    implementation 'androidx.contentpager:contentpager:1.0.0'
+
+    // Home Screen Widgets
+    implementation 'androidx.glance:glance-appwidget:1.0.0'
+    implementation 'androidx.glance:glance-material3:1.0.0'
 
     // Testing
     testImplementation 'junit:junit:4.13.2'
