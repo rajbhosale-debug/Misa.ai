@@ -31,29 +31,45 @@
     <MajorUpgrade DowngradeErrorMessage="A newer version of MISA.AI is already installed." />
     <MinorUpgrade Schedule="afterInstallInitialize" />
 
-    <!-- Features -->
-    <Feature Id="ProductFeature" Title="MISA.AI" Level="1" Display="expand">
+    <!-- Enhanced Features with Express Install -->
+    <Feature Id="ProductFeature" Title="MISA.AI Core" Level="1" Display="expand">
       <ComponentRef Id="MainExecutable" />
       <ComponentRef Id="KernelService" />
       <ComponentRef Id="ConfigFiles" />
       <ComponentRef Id="ApplicationShortcuts" />
       <ComponentRef Id="DesktopShortcut" />
       <ComponentRef Id="RegistryEntries" />
+      <ComponentRef Id="SystemTrayIntegration" />
+      <ComponentRef Id="FirewallConfiguration" />
 
-      <Feature Id="DockerFeature" Title="Docker Desktop" Description="Install Docker Desktop for container support" Level="2">
+      <!-- Docker Desktop - Express Install Default -->
+      <Feature Id="DockerFeature" Title="Docker Desktop (Required)" Description="Install Docker Desktop for container support"
+               Level="[INSTALLDOCKER]" Display="hidden">
         <ComponentRef Id="DockerInstaller" />
       </Feature>
 
-      <Feature Id="OllamaFeature" Title="Ollama AI Runtime" Description="Install Ollama for running AI models" Level="2">
+      <!-- Ollama AI Runtime - Express Install Default -->
+      <Feature Id="OllamaFeature" Title="Ollama AI Runtime (Recommended)" Description="Install Ollama for running AI models locally"
+               Level="[INSTALLOLLAMA]" Display="hidden">
         <ComponentRef Id="OllamaInstaller" />
       </Feature>
 
-      <Feature Id="ModelsFeature" Title="AI Models" Description="Download pre-trained AI models" Level="2">
+      <!-- AI Models - Express Install Default -->
+      <Feature Id="ModelsFeature" Title="AI Models (Recommended)" Description="Download pre-trained AI models for offline use"
+               Level="[EXPRESS_INSTALL]" Display="hidden">
         <ComponentRef Id="AIModels" />
       </Feature>
 
-      <Feature Id="ServiceFeature" Title="Windows Service Integration" Description="Install MISA Kernel as Windows service" Level="2">
+      <!-- Windows Service Integration - Express Install Default -->
+      <Feature Id="ServiceFeature" Title="Windows Service Integration" Description="Install MISA Kernel as Windows service with auto-start"
+               Level="[EXPRESS_INSTALL]" Display="hidden">
         <ComponentRef Id="ServiceRegistration" />
+      </Feature>
+
+      <!-- Auto-start with Windows - Express Install Default -->
+      <Feature Id="AutoStartFeature" Title="Auto-start with Windows" Description="Launch MISA.AI automatically when Windows starts"
+               Level="[AUTOSTART]" Display="hidden">
+        <ComponentRef Id="AutoStartRegistration" />
       </Feature>
     </Feature>
 
