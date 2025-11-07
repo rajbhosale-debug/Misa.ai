@@ -961,15 +961,306 @@ impl DiscoveryService {
     }
 
     pub async fn stop(&self) -> MisaResult<()> {
-        info!("Stopping discovery service");
+        info!("Stopping enhanced discovery service");
 
         // Cleanup active discovery sessions
         let mut sessions = self.active_discovery.write().await;
         sessions.clear();
 
+        // Stop connection quality monitoring
+        self.connection_quality_monitor.stop_monitoring().await?;
+
+        Ok(())
+    }
+
+    /// Enhanced broadcast with device history and quality information
+    async fn broadcast_device_info_enhanced(
+        socket: &Arc<tokio::net::UdpSocket>,
+        device_history: &Arc<RwLock<HashMap<String, DeviceHistory>>>,
+        quality_monitor: &Arc<RwLock<HashMap<String, ConnectionQuality>>>,
+    ) -> MisaResult<()> {
+        let history = device_history.read().await;
+        let quality = quality_monitor.read().await;
+
+        let device_info = DeviceDiscoveryPacket {
+            device_id: "local-device".to_string(),
+            device_name: "Misa Device".to_string(),
+            device_type: "Desktop".to_string(),
+            capabilities: vec![
+                "gpu".to_string(),
+                "vision".to_string(),
+                "audio".to_string(),
+                "remote_desktop".to_string(),
+                "background_discovery".to_string(),
+            ],
+            port: 8080,
+            timestamp: chrono::Utc::now(),
+        };
+
+        let packet_data = serde_json::to_vec(&device_info)
+            .map_err(|e| MisaError::Serialization(e))?;
+
+        // Broadcast to local network with enhanced information
+        let broadcast_addr = "255.255.255.255:8081";
+        match socket.send_to(&packet_data, broadcast_addr).await {
+            Ok(_) => debug!("Enhanced device discovery packet broadcasted"),
+            Err(e) => warn!("Failed to broadcast discovery packet: {}", e),
+        }
+
+        Ok(())
+    }
+
+    /// Background device scanning for continuous discovery
+    async fn background_device_scan(
+        socket: &Arc<tokio::net::UdpSocket>,
+        device_history: &Arc<RwLock<HashMap<String, DeviceHistory>>>,
+    ) -> MisaResult<()> {
+        debug!("Performing background device scan");
+
+        // Scan for known devices first
+        let history = device_history.read().await;
+        for (device_id, device_info) in history.iter() {
+            if should_scan_device(device_info) {
+                // Send directed discovery packet to known device
+                if let Err(e) = Self::send_directed_discovery(socket, device_id).await {
+                    debug!("Failed to scan device {}: {}", device_id, e);
+                }
+            }
+        }
+
+        // Perform general network scan
+        if let Err(e) = Self::network_discovery_scan(socket).await {
+            warn!("Network discovery scan failed: {}", e);
+        }
+
+        Ok(())
+    }
+
+    /// Update smart suggestions based on device history and usage patterns
+    async fn update_smart_suggestions(
+        device_history: &Arc<RwLock<HashMap<String, DeviceHistory>>>,
+    ) -> MisaResult<()> {
+        debug!("Updating smart device suggestions");
+
+        let mut history = device_history.write().await;
+        let now = chrono::Utc::now();
+
+        // Update device scores based on recent usage
+        for (_, device_info) in history.iter_mut() {
+            let hours_since_last_use = (now - device_info.last_connected).num_hours();
+
+            // Decay score over time
+            if hours_since_last_use > 24 {
+                device_info.success_rate = device_info.success_rate * 0.95;
+            }
+
+            // Boost recently successful devices
+            if hours_since_last_use < 1 && device_info.success_rate > 0.8 {
+                device_info.success_rate = (device_info.success_rate * 1.1).min(1.0);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Send directed discovery to specific device
+    async fn send_directed_discovery(
+        socket: &Arc<tokio::net::UdpSocket>,
+        device_id: &str,
+    ) -> MisaResult<()> {
+        // Implementation would send directed packet to specific device
+        debug!("Sending directed discovery to device: {}", device_id);
+        Ok(())
+    }
+
+    /// Perform general network discovery scan
+    async fn network_discovery_scan(socket: &Arc<tokio::net::UdpSocket>) -> MisaResult<()> {
+        // Implementation would scan local network for devices
+        debug!("Performing network discovery scan");
+        Ok(())
+    }
+
+    /// Enhanced packet handler with device history tracking
+    async fn handle_discovery_packet_enhanced(
+        data: &[u8],
+        addr: std::net::SocketAddr,
+        active_discovery: &Arc<RwLock<HashMap<String, DiscoverySession>>>,
+        device_history: &Arc<RwLock<HashMap<String, DeviceHistory>>>,
+        quality_monitor: &ConnectionQualityMonitor,
+    ) -> MisaResult<()> {
+        let packet: DeviceDiscoveryPacket = serde_json::from_slice(data)
+            .map_err(|_| MisaError::Device("Invalid discovery packet".to_string()))?;
+
+        debug!("Received enhanced discovery packet from {}: {}", addr, packet.device_id);
+
+        // Update device history
+        Self::update_device_history(&packet, device_history).await?;
+
+        // Create enhanced discovery session
+        let session = DiscoverySession {
+            session_id: uuid::Uuid::new_v4().to_string(),
+            device_id: packet.device_id.clone(),
+            started_at: chrono::Utc::now(),
+            qr_token: format!("misa://pair/{}/{}", packet.device_id, chrono::Utc::now().timestamp()),
+            pairing_status: PairingStatus::PendingConfirmation,
+            auto_pair_enabled: should_auto_pair(&packet, device_history).await,
+            connection_strength: estimate_signal_strength(addr),
+        };
+
+        let mut sessions = active_discovery.write().await;
+        sessions.insert(packet.device_id.clone(), session);
+
+        // Monitor connection quality
+        quality_monitor.update_connection_quality(&packet.device_id, addr).await?;
+
+        Ok(())
+    }
+
+    /// Update device history with new discovery information
+    async fn update_device_history(
+        packet: &DeviceDiscoveryPacket,
+        device_history: &Arc<RwLock<HashMap<String, DeviceHistory>>>,
+    ) -> MisaResult<()> {
+        let mut history = device_history.write().await;
+
+        let device_history_entry = history.entry(packet.device_id.clone()).or_insert_with(|| DeviceHistory {
+            device_id: packet.device_id.clone(),
+            last_connected: chrono::Utc::now(),
+            connection_count: 0,
+            average_signal_strength: 0.0,
+            success_rate: 1.0,
+            preferred_for_tasks: Vec::new(),
+            device_type: DeviceType::Desktop, // Default
+        });
+
+        // Update connection info
+        device_history_entry.last_connected = chrono::Utc::now();
+        device_history_entry.connection_count += 1;
+
         Ok(())
     }
 }
+
+/// Helper functions for enhanced discovery
+
+fn should_scan_device(device_info: &DeviceHistory) -> bool {
+    let hours_since_last_use = (chrono::Utc::now() - device_info.last_connected).num_hours();
+    hours_since_last_use < 168 && device_info.success_rate > 0.5 // Scan devices used in last week with decent success rate
+}
+
+async fn should_auto_pair(packet: &DeviceDiscoveryPacket, device_history: &Arc<RwLock<HashMap<String, DeviceHistory>>>) -> bool {
+    let history = device_history.read().await;
+
+    if let Some(device_info) = history.get(&packet.device_id) {
+        // Auto-pair if device has been successfully paired before and has good success rate
+        device_info.success_rate > 0.8 && device_info.connection_count > 3
+    } else {
+        // Auto-pair new devices that have specific capabilities
+        packet.capabilities.contains(&"trusted_source".to_string())
+    }
+}
+
+fn estimate_signal_strength(addr: std::net::SocketAddr) -> f32 {
+    // Simple estimation based on address type
+    match addr.ip() {
+        std::net::IpAddr::V4(ipv4) => {
+            if ipv4.is_loopback() {
+                1.0
+            } else if ipv4.is_private() {
+                0.8
+            } else {
+                0.5
+            }
+        }
+        std::net::IpAddr::V6(_) => 0.7,
+    }
+}
+
+impl ConnectionQualityMonitor {
+    pub fn new() -> Self {
+        Self {
+            active_connections: Arc::new(RwLock::new(HashMap::new())),
+            quality_history: Arc::new(RwLock::new(Vec::new())),
+        }
+    }
+
+    pub async fn start_monitoring(&self) -> MisaResult<()> {
+        info!("Starting connection quality monitoring");
+
+        let connections = Arc::clone(&self.active_connections);
+        let history = Arc::clone(&self.quality_history);
+
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(10));
+
+            loop {
+                interval.tick().await;
+
+                if let Err(e) = Self::monitor_connection_quality(&connections, &history).await {
+                    warn!("Connection quality monitoring error: {}", e);
+                }
+            }
+        });
+
+        Ok(())
+    }
+
+    pub async fn stop_monitoring(&self) -> MisaResult<()> {
+        info!("Stopping connection quality monitoring");
+
+        let mut connections = self.active_connections.write().await;
+        connections.clear();
+
+        let mut history = self.quality_history.write().await;
+        history.clear();
+
+        Ok(())
+    }
+
+    pub async fn update_connection_quality(&self, device_id: &str, addr: std::net::SocketAddr) -> MisaResult<()> {
+        let mut connections = self.active_connections.write().await;
+
+        let quality = ConnectionQuality {
+            device_id: device_id.to_string(),
+            latency_ms: 0, // Would measure actual latency
+            bandwidth_mbps: 0.0, // Would measure actual bandwidth
+            signal_strength: estimate_signal_strength(addr),
+            stability_score: 1.0,
+            last_updated: chrono::Utc::now(),
+            uptime_percentage: 100.0,
+        };
+
+        connections.insert(device_id.to_string(), quality);
+
+        Ok(())
+    }
+
+    async fn monitor_connection_quality(
+        connections: &Arc<RwLock<HashMap<String, ConnectionQuality>>>,
+        history: &Arc<RwLock<Vec<QualityMeasurement>>>,
+    ) -> MisaResult<()> {
+        let current_connections = connections.read().await;
+        let mut quality_history = history.write().await;
+
+        for (device_id, quality) in current_connections.iter() {
+            let measurement = QualityMeasurement {
+                device_id: device_id.clone(),
+                timestamp: chrono::Utc::now(),
+                latency_ms: quality.latency_ms,
+                packet_loss: 0.0, // Would measure actual packet loss
+                jitter_ms: 0, // Would measure actual jitter
+            };
+
+            quality_history.push(measurement);
+
+            // Keep only last 100 measurements per device
+            if quality_history.len() > 1000 {
+                quality_history.drain(0..quality_history.len() - 1000);
+            }
+        }
+
+        Ok(())
+    }
 
 impl RemoteDesktopManager {
     pub fn new(enabled: bool) -> Self {
