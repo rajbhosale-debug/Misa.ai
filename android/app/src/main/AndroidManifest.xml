@@ -301,7 +301,26 @@
             </intent-filter>
         </receiver>
 
-        <!-- Meta-data -->
+        <!-- Home Screen Widgets -->
+        <receiver android:name=".widgets.MisaWidgetProvider"
+                  android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                       android:resource="@xml/misa_widget_info" />
+        </receiver>
+
+        <receiver android:name=".widgets.MisaQuickActionsWidget"
+                  android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                       android:resource="@xml/misa_quick_actions_widget_info" />
+        </receiver>
+
+        <!-- Enhanced Meta-data -->
         <meta-data
             android:name="com.google.ml.vision.DEPENDENCIES"
             android:value="ocr" />
@@ -309,6 +328,19 @@
         <!-- Security configurations -->
         <meta-data
             android:name="android.webkit.WebView.MetricsOptOut"
+            android:value="true" />
+
+        <!-- Express Setup Configuration -->
+        <meta-data
+            android:name="com.misa.ai.express_setup_enabled"
+            android:value="true" />
+
+        <meta-data
+            android:name="com.misa.ai.background_discovery_enabled"
+            android:value="true" />
+
+        <meta-data
+            android:name="com.misa.ai.auto_download_models"
             android:value="true" />
 
     </application>
