@@ -177,11 +177,47 @@
             android:enabled="true"
             android:exported="false" />
 
-        <!-- Device Discovery Service -->
+        <!-- Enhanced Device Discovery Service -->
         <service
             android:name=".services.DeviceDiscoveryService"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="location|dataSync" />
+
+        <!-- Background Model Download Service -->
+        <service
+            android:name=".services.ModelDownloadService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- System Tray Integration Service -->
+        <service
+            android:name=".services.SystemTrayService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- QR Code Scanning Service -->
+        <service
+            android:name=".services.QRScanningService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="camera" />
+
+        <!-- Auto-pairing Service -->
+        <service
+            android:name=".services.AutoPairingService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location|dataSync" />
+
+        <!-- Background Sync Service -->
+        <service
+            android:name=".services.BackgroundSyncService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- Voice Recognition Service -->
         <service
