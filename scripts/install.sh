@@ -1024,17 +1024,53 @@ main() {
 # Handle script arguments
 case "${1:-}" in
     --help|-h)
-        echo "MISA.AI Installation Script"
+        echo "MISA.AI Ultra-Simple Installation Script"
         echo ""
         echo "Usage: $0 [options]"
         echo ""
         echo "Options:"
-        echo "  --help, -h     Show this help message"
-        echo "  --uninstall    Remove MISA.AI installation"
+        echo "  --help, -h              Show this help message"
+        echo "  --silent, -s            Run silent installation with defaults"
+        echo "  --auto-prereqs          Automatically install Docker and prerequisites"
+        echo "  --background, -b        Run installation in background"
+        echo "  --progress-callback     Specify callback function for progress updates"
+        echo "  --uninstall             Remove MISA.AI installation"
+        echo "  --rollback              Rollback failed installation"
+        echo "  --status                Show installation status"
         echo ""
-        echo "This script installs MISA.AI with Docker."
-        echo "Prerequisites: Docker, Docker Compose"
+        echo "Examples:"
+        echo "  $0                      Interactive installation"
+        echo "  $0 --silent             Silent one-click installation"
+        echo "  $0 --auto-prereqs       Install with automatic Docker setup"
+        echo "  $0 --silent --auto-prereqs  Silent installation with auto-prerequisites"
+        echo ""
+        echo "This script installs MISA.AI with Docker and optional automatic setup."
+        echo "Enhanced features include progress tracking, rollback, and silent mode."
         exit 0
+        ;;
+    --silent|-s)
+        SILENT_MODE=true
+        AUTO_INSTALL_PREREQUISITES=true
+        main
+        ;;
+    --auto-prereqs)
+        AUTO_INSTALL_PREREQUISITES=true
+        main
+        ;;
+    --background|-b)
+        BACKGROUND_INSTALL=true
+        SILENT_MODE=true
+        AUTO_INSTALL_PREREQUISITES=true
+
+        # Run installation in background
+        nohup "$0" --silent > "$INSTALL_DIR/logs/installation.log" 2>&1 &
+        echo "Background installation started. Check logs: $INSTALL_DIR/logs/installation.log"
+        exit 0
+        ;;
+    --progress-callback)
+        shift
+        PROGRESS_CALLBACK="$1"
+        main
         ;;
     --uninstall)
         echo "🗑️  Uninstalling MISA.AI..."
@@ -1046,6 +1082,20 @@ case "${1:-}" in
             echo "✅ MISA.AI uninstalled successfully"
         else
             echo "ℹ️  MISA.AI is not installed"
+        fi
+        exit 0
+        ;;
+    --rollback)
+        echo "🔄 Rolling back MISA.AI installation..."
+        rollback_install
+        exit 0
+        ;;
+    --status)
+        if [ -f "$INSTALL_DIR/.install-state" ]; then
+            echo "📊 Installation Status:"
+            cat "$INSTALL_DIR/.install-state" | jq -r '.' 2>/dev/null || cat "$INSTALL_DIR/.install-state"
+        else
+            echo "ℹ️  No installation status found"
         fi
         exit 0
         ;;
