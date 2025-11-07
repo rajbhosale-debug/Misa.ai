@@ -859,6 +859,32 @@ download_model() {
     fi
 }
 
+# Silent version of download_model
+download_model_silent() {
+    show_progress 17 15 "Downloading AI model..."
+
+    # Wait for Ollama to be ready
+    for i in {1..60}; do
+        if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
+            break
+        fi
+        if [ $i -eq 60 ]; then
+            log_message "WARNING" "Ollama is taking longer to start. Model download will be skipped."
+            return 0
+        fi
+        sleep 2
+    done
+
+    # Download Mixtral model silently
+    if docker exec misa-ollama ollama pull mixtral >/dev/null 2>&1; then
+        log_message "INFO" "Mixtral model downloaded successfully"
+        show_progress 18 15 "AI model downloaded"
+    else
+        log_message "WARNING" "Failed to download Mixtral model"
+        show_progress 18 15 "AI model download skipped"
+    fi
+}
+
 # Create management scripts
 create_management_scripts() {
     print_info "Creating management scripts..."
