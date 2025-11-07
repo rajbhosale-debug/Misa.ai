@@ -228,6 +228,73 @@
           <RegistryValue Name="OllamaInstalled" Type="integer" Value="[INSTALLOLLAMA]" />
         </RegistryKey>
       </Component>
+
+      <!-- System Tray Integration Component -->
+      <Component Id="SystemTrayIntegration" Guid="*">
+        <File Id="SystemTrayDll" Source="$(var.SourceDir)\SystemTray.dll" />
+        <File Id="NotificationIcons" Source="$(var.SourceDir)\resources\tray-icons.ico" />
+
+        <!-- System tray registry entries -->
+        <RegistryKey Root="HKLM" Key="Software\MisaAI\MISA.AI\SystemTray">
+          <RegistryValue Name="Enabled" Type="integer" Value="1" />
+          <RegistryValue Name="MinimizeToTray" Type="integer" Value="1" />
+          <RegistryValue Name="StartMinimized" Type="integer" Value="0" />
+          <RegistryValue Name="ShowNotifications" Type="integer" Value="1" />
+        </RegistryKey>
+
+        <RegistryValue Root="HKCU"
+                      Key="Software\Microsoft\MisaAI\SystemTray"
+                      Name="installed"
+                      Type="integer"
+                      Value="1"
+                      KeyPath="yes"/>
+      </Component>
+
+      <!-- Firewall Configuration Component -->
+      <Component Id="FirewallConfiguration" Guid="*">
+        <!-- Windows Firewall exceptions -->
+        <util:FirewallException Id="MisaKernelFirewall"
+                                Name="MISA.AI Kernel"
+                                Description="Allow MISA.AI Kernel to communicate on the network"
+                                Program="[INSTALLFOLDER]MisaKernel.exe"
+                                Port="8080"
+                                Protocol="tcp"
+                                Scope="any"
+                                Profile="all"/>
+
+        <util:FirewallException Id="MisaWebFirewall"
+                                Name="MISA.AI Web Interface"
+                                Description="Allow MISA.AI Web Interface"
+                                Port="3000"
+                                Protocol="tcp"
+                                Scope="local"
+                                Profile="private"/>
+
+        <RegistryValue Root="HKLM"
+                      Key="Software\MisaAI\MISA.AI\Firewall"
+                      Name="configured"
+                      Type="integer"
+                      Value="1"
+                      KeyPath="yes"/>
+      </Component>
+
+      <!-- Auto-start Registration Component -->
+      <Component Id="AutoStartRegistration" Guid="*">
+        <Shortcut Id="AutoStartShortcut"
+                  Name="MISA.AI"
+                  Description="MISA.AI - Privacy-First AI Assistant"
+                  Target="[#MisaAIexe]"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="MisaAI.exe"
+                  IconIndex="0" />
+
+        <RegistryValue Root="HKCU"
+                      Key="Software\Microsoft\Windows\CurrentVersion\Run"
+                      Name="MISA.AI"
+                      Type="string"
+                      Value="&quot;[#MisaAIexe]&quot; --minimized"
+                      KeyPath="yes"/>
+      </Component>
     </DirectoryRef>
 
     <!-- Data Directory Components -->
