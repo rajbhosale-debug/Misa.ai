@@ -759,6 +759,20 @@ start_services() {
     print_success "Services started"
 }
 
+# Silent version of start_services
+start_services_silent() {
+    show_progress 15 15 "Starting services..."
+
+    cd "$INSTALL_DIR"
+    if docker-compose up -d 2>/dev/null; then
+        log_message "INFO" "Services started successfully"
+        show_progress 16 15 "Services started"
+    else
+        log_message "ERROR" "Failed to start services"
+        return 1
+    fi
+}
+
 # Wait for services to be ready
 wait_for_services() {
     print_info "Waiting for services to be ready..."
