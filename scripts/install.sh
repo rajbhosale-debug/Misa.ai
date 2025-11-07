@@ -290,17 +290,24 @@ check_docker_compose() {
 
 # Create installation directory
 create_install_dir() {
-    print_info "Creating installation directory: $INSTALL_DIR"
+    show_progress 1 15 "Creating installation directory..."
 
     if [ -d "$INSTALL_DIR" ]; then
-        print_warning "Installation directory already exists."
-        read -p "Do you want to remove existing installation? (y/N): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            rm -rf "$INSTALL_DIR"
-            print_success "Removed existing installation"
+        if [ "$SILENT_MODE" = "true" ]; then
+            # In silent mode, backup existing installation
+            local backup_dir="${INSTALL_DIR}.backup.$(date +%s)"
+            mv "$INSTALL_DIR" "$backup_dir"
+            log_message "INFO" "Existing installation backed up to: $backup_dir"
         else
-            print_info "Updating existing installation..."
+            print_warning "Installation directory already exists."
+            read -p "Do you want to remove existing installation? (y/N): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                rm -rf "$INSTALL_DIR"
+                print_success "Removed existing installation"
+            else
+                print_info "Updating existing installation..."
+            fi
         fi
     fi
 
@@ -308,8 +315,126 @@ create_install_dir() {
     mkdir -p "$INSTALL_DIR/data"
     mkdir -p "$INSTALL_DIR/config"
     mkdir -p "$INSTALL_DIR/logs"
+    mkdir -p "$INSTALL_DIR/backups"
 
-    print_success "Installation directory created"
+    # Create installation state file for rollback
+    echo '{"status":"started","step":"directory_created","timestamp":"'$(date -Iseconds)'"}' > "$INSTALL_DIR/.install-state"
+
+    show_progress 2 15 "Installation directory created"
+}
+
+# Create backup for rollback
+create_backup() {
+    local backup_dir="${INSTALL_DIR}/backups/pre-$(date +%s)"
+    mkdir -p "$backup_dir"
+
+    # Backup current configuration and data
+    if [ -d "$INSTALL_DIR/config" ]; then
+        cp -r "$INSTALL_DIR/config" "$backup_dir/" 2>/dev/null || true
+    fi
+    if [ -d "$INSTALL_DIR/data" ]; then
+        cp -r "$INSTALL_DIR/data" "$backup_dir/" 2>/dev/null || true
+    fi
+
+    echo "$backup_dir"
+}
+
+# Rollback installation on failure
+rollback_install() {
+    print_error "Installation failed. Rolling back..."
+
+    # Stop any running services
+    if [ -f "$INSTALL_DIR/docker-compose.yml" ]; then
+        cd "$INSTALL_DIR"
+        docker-compose down 2>/dev/null || true
+    fi
+
+    # Restore from backup if exists
+    local latest_backup=$(ls -t "$INSTALL_DIR/backups" 2>/dev/null | head -1)
+    if [ -n "$latest_backup" ]; then
+        print_info "Restoring from backup..."
+        cp -r "$INSTALL_DIR/backups/$latest_backup"/* "$INSTALL_DIR/" 2>/dev/null || true
+    fi
+
+    # Update installation state
+    echo '{"status":"rolled_back","step":"rollback","timestamp":"'$(date -Iseconds)'"}' > "$INSTALL_DIR/.install-state"
+
+    print_error "Installation rolled back due to errors"
+}
+
+# Silent installation function
+silent_install() {
+    SILENT_MODE=true
+    AUTO_INSTALL_PREREQUISITES=true
+
+    print_info "Starting silent installation..."
+
+    # Set default values for prompts
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Create installation progress tracking
+    local total_steps=15
+    local current_step=0
+
+    # Enhanced silent installation with progress tracking
+    check_prerequisites_silent || return 1
+    ((current_step += 3)); show_progress $current_step $total_steps "Prerequisites checked"
+
+    create_install_dir || return 1
+    ((current_step += 1)); show_progress $current_step $total_steps "Directory created"
+
+    download_distribution_silent || return 1
+    ((current_step += 2)); show_progress $current_step $total_steps "Distribution downloaded"
+
+    create_config || return 1
+    ((current_step += 1)); show_progress $current_step $total_steps "Configuration created"
+
+    create_docker_compose || return 1
+    ((current_step += 1)); show_progress $current_step $total_steps "Docker compose created"
+
+    create_env_file || return 1
+    ((current_step += 1)); show_progress $current_step $total_steps "Environment configured"
+
+    pull_images_silent || return 1
+    ((current_step += 3)); show_progress $current_step $total_steps "Docker images pulled"
+
+    start_services_silent || return 1
+    ((current_step += 1)); show_progress $current_step $total_steps "Services started"
+
+    wait_for_services_silent || return 1
+    ((current_step += 1)); show_progress $current_step $total_steps "Services ready"
+
+    download_model_silent || return 1
+    ((current_step += 1)); show_progress $current_step $total_steps "AI model downloaded"
+
+    create_management_scripts || return 1
+    show_progress $total_steps $total_steps "Installation completed"
+
+    # Update installation state
+    echo '{"status":"completed","step":"finished","timestamp":"'$(date -Iseconds)'"}' > "$INSTALL_DIR/.install-state"
+
+    print_success "Silent installation completed successfully"
+}
+
+# Check prerequisites in silent mode
+check_prerequisites_silent() {
+    show_progress 0 3 "Checking prerequisites..."
+
+    check_root || return 1
+    show_progress 1 3 "Root privileges checked"
+
+    detect_platform || return 1
+    show_progress 2 3 "Platform detected"
+
+    check_docker || return 1
+    show_progress 3 3 "Docker verified"
+
+    check_docker_compose || return 1
+    show_progress 4 3 "Docker Compose verified"
+
+    check_network_connectivity || return 0  # Network connectivity is optional
+
+    return 0
 }
 
 # Download MISA.AI distribution
