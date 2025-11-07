@@ -978,31 +978,47 @@ show_success() {
 
 # Main installation flow
 main() {
-    print_banner
+    if [ "$SILENT_MODE" != "true" ]; then
+        print_banner
+        print_info "Starting MISA.AI installation..."
+        echo ""
+    else
+        log_message "INFO" "Starting MISA.AI installation..."
+    fi
 
-    print_info "Starting MISA.AI installation..."
-    echo ""
+    # Create backup before installation
+    create_backup >/dev/null 2>&1
 
-    # Check prerequisites
-    check_root
-    detect_platform
-    check_docker
-    check_docker_compose
+    # Installation with error handling and rollback
+    if [ "$SILENT_MODE" = "true" ]; then
+        if ! silent_install; then
+            rollback_install
+            exit 1
+        fi
+    else
+        # Interactive installation
+        # Check prerequisites
+        check_root || exit 1
+        detect_platform || exit 1
+        check_docker || exit 1
+        check_docker_compose || exit 1
+        check_network_connectivity || true
 
-    # Installation steps
-    create_install_dir
-    download_distribution
-    create_config
-    create_docker_compose
-    create_env_file
-    pull_images
-    start_services
-    wait_for_services
-    download_model
-    create_management_scripts
+        # Installation steps
+        create_install_dir || exit 1
+        download_distribution || exit 1
+        create_config || exit 1
+        create_docker_compose || exit 1
+        create_env_file || exit 1
+        pull_images || exit 1
+        start_services || exit 1
+        wait_for_services || true  # Continue even if services take time
+        download_model || true  # Continue even if model download fails
+        create_management_scripts || exit 1
 
-    # Success
-    show_success
+        # Success
+        show_success
+    fi
 }
 
 # Handle script arguments
