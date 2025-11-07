@@ -143,15 +143,34 @@ detect_platform() {
     print_success "Platform detected: $PLATFORM-$ARCH"
 }
 
+# Check network connectivity
+check_network_connectivity() {
+    print_info "Checking network connectivity..."
+
+    if curl -s --connect-timeout 5 https://api.github.com >/dev/null 2>&1; then
+        print_success "Network connectivity verified"
+        return 0
+    else
+        print_warning "Limited network connectivity detected"
+        return 1
+    fi
+}
+
 # Check if Docker is installed and running
 check_docker() {
     if ! command -v docker >/dev/null 2>&1; then
-        print_error "Docker is not installed."
-        print_info "Please install Docker first:"
-        echo "  • Linux: https://docs.docker.com/engine/install/"
-        echo "  • macOS: Download Docker Desktop from https://www.docker.com/products/docker-desktop"
-        echo "  • Windows: Use WSL2 and install Docker Desktop"
-        exit 1
+        if [ "$AUTO_INSTALL_PREREQUISITES" = "true" ]; then
+            print_info "Docker not found. Installing automatically..."
+            install_docker
+        else
+            print_error "Docker is not installed."
+            print_info "Please install Docker first:"
+            echo "  • Linux: https://docs.docker.com/engine/install/"
+            echo "  • macOS: Download Docker Desktop from https://www.docker.com/products/docker-desktop"
+            echo "  • Windows: Use WSL2 and install Docker Desktop"
+            echo "  • Or run with --auto-prereqs to install automatically"
+            exit 1
+        fi
     fi
 
     if ! docker info >/dev/null 2>&1; then
@@ -160,6 +179,99 @@ check_docker() {
     fi
 
     print_success "Docker is available and running"
+}
+
+# Install Docker automatically based on platform
+install_docker() {
+    show_progress 1 10 "Installing Docker..."
+
+    case "$PLATFORM" in
+        "linux")
+            install_docker_linux
+            ;;
+        "macos")
+            install_docker_macos
+            ;;
+        "windows")
+            print_warning "Automatic Docker installation not supported on Windows. Please install Docker Desktop manually."
+            exit 1
+            ;;
+        *)
+            print_error "Unsupported platform for automatic Docker installation"
+            exit 1
+            ;;
+    esac
+
+    show_progress 10 10 "Docker installation completed"
+}
+
+install_docker_linux() {
+    # Check distribution
+    if [ -f /etc/debian_version ]; then
+        # Debian/Ubuntu
+        print_info "Installing Docker on Debian/Ubuntu..."
+
+        # Update package index
+        sudo apt-get update -qq >/dev/null 2>&1
+
+        # Install prerequisites
+        sudo apt-get install -y ca-certificates curl gnupg lsb-release >/dev/null 2>&1
+
+        # Add Docker's official GPG key
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg >/dev/null 2>&1
+
+        # Set up the repository
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+        # Install Docker Engine
+        sudo apt-get update -qq >/dev/null 2>&1
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io >/dev/null 2>&1
+
+        # Start and enable Docker
+        sudo systemctl start docker >/dev/null 2>&1
+        sudo systemctl enable docker >/dev/null 2>&1
+
+        # Add user to docker group
+        sudo usermod -aG docker "$USER" >/dev/null 2>&1
+
+    elif [ -f /etc/redhat-release ]; then
+        # RHEL/CentOS/Fedora
+        print_info "Installing Docker on RHEL/CentOS/Fedora..."
+
+        # Install prerequisites
+        sudo yum install -y yum-utils >/dev/null 2>&1
+
+        # Add Docker repository
+        sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >/dev/null 2>&1
+
+        # Install Docker Engine
+        sudo yum install -y docker-ce docker-ce-cli containerd.io >/dev/null 2>&1
+
+        # Start and enable Docker
+        sudo systemctl start docker >/dev/null 2>&1
+        sudo systemctl enable docker >/dev/null 2>&1
+
+        # Add user to docker group
+        sudo usermod -aG docker "$USER" >/dev/null 2>&1
+    else
+        print_error "Unsupported Linux distribution for automatic Docker installation"
+        exit 1
+    fi
+}
+
+install_docker_macos() {
+    print_info "Installing Docker Desktop on macOS..."
+
+    # Check if Homebrew is installed
+    if ! command -v brew >/dev/null 2>&1; then
+        print_info "Installing Homebrew first..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" >/dev/null 2>&1
+    fi
+
+    # Install Docker Desktop
+    brew install --cask docker >/dev/null 2>&1
+
+    print_info "Please start Docker Desktop manually after installation completes"
 }
 
 # Check if Docker Compose is available
