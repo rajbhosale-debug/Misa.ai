@@ -830,7 +830,7 @@ impl DiscoveryService {
             return Ok(());
         }
 
-        info!("Starting discovery service on port {}", self.discovery_port);
+        info!("Starting enhanced discovery service on port {}", self.discovery_port);
 
         // Start UDP discovery service
         let udp_socket = tokio::net::UdpSocket::bind(("0.0.0.0", self.discovery_port))
@@ -839,22 +839,47 @@ impl DiscoveryService {
 
         let active_discovery = Arc::clone(&self.active_discovery);
         let broadcast_interval = self.broadcast_interval_seconds;
+        let background_scanning = self.background_scanning;
+        let smart_suggestions = self.smart_suggestions;
+        let last_scan = Arc::clone(&self.last_scan);
+        let device_history = Arc::clone(&self.device_history);
+        let quality_monitor = Arc::clone(&self.connection_quality_monitor.active_connections);
 
-        // Spawn discovery broadcaster
+        // Spawn enhanced discovery broadcaster
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(broadcast_interval));
             let socket = Arc::new(udp_socket);
 
             loop {
                 interval.tick().await;
-                if let Err(e) = Self::broadcast_device_info(&socket).await {
+
+                // Update last scan time
+                *last_scan.write().await = chrono::Utc::now();
+
+                if let Err(e) = Self::broadcast_device_info_enhanced(&socket, &device_history, &quality_monitor).await {
                     warn!("Failed to broadcast device info: {}", e);
+                }
+
+                // Background scanning
+                if background_scanning {
+                    if let Err(e) = Self::background_device_scan(&socket, &device_history).await {
+                        warn!("Background scan failed: {}", e);
+                    }
+                }
+
+                // Smart suggestions
+                if smart_suggestions {
+                    if let Err(e) = Self::update_smart_suggestions(&device_history).await {
+                        warn!("Smart suggestions update failed: {}", e);
+                    }
                 }
             }
         });
 
-        // Spawn discovery listener
+        // Spawn enhanced discovery listener
         let active_discovery_listener = Arc::clone(&self.active_discovery);
+        let device_history_listener = Arc::clone(&self.device_history);
+        let quality_monitor_listener = self.connection_quality_monitor.clone();
         let listener_socket = tokio::net::UdpSocket::bind(("0.0.0.0", self.discovery_port + 1))
             .await
             .map_err(|e| MisaError::Device(format!("Failed to bind listener socket: {}", e)))?;
@@ -865,7 +890,13 @@ impl DiscoveryService {
                 match listener_socket.recv_from(&mut buf).await {
                     Ok((len, addr)) => {
                         let data = &buf[..len];
-                        if let Err(e) = Self::handle_discovery_packet(data, addr, &active_discovery_listener).await {
+                        if let Err(e) = Self::handle_discovery_packet_enhanced(
+                            data,
+                            addr,
+                            &active_discovery_listener,
+                            &device_history_listener,
+                            &quality_monitor_listener
+                        ).await {
                             warn!("Failed to handle discovery packet: {}", e);
                         }
                     }
@@ -874,7 +905,10 @@ impl DiscoveryService {
             }
         });
 
-        info!("Discovery service started successfully");
+        // Start connection quality monitoring
+        self.connection_quality_monitor.start_monitoring().await?;
+
+        info!("Enhanced discovery service started successfully");
         Ok(())
     }
 
