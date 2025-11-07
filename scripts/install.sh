@@ -679,7 +679,7 @@ EOF
 
 # Create environment file
 create_env_file() {
-    print_info "Creating environment configuration..."
+    show_progress 10 15 "Creating environment configuration..."
 
     if [ ! -f "$INSTALL_DIR/.env" ]; then
         cat > "$INSTALL_DIR/.env" << 'EOF'
@@ -710,11 +710,15 @@ ENCRYPTION_KEY=$(openssl rand -hex 32)
 ENABLE_CLOUD_MODELS=false
 ENABLE_TELEMETRY=false
 ENABLE_CRASH_REPORTS=false
+ENABLE_SILENT_MODE=true
+AUTO_INSTALL_PREREQUISITES=true
 EOF
         print_success "Environment file created"
     else
         print_info "Environment file already exists"
     fi
+
+    show_progress 11 15 "Environment configuration created"
 }
 
 # Pull Docker images
