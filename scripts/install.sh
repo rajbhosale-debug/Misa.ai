@@ -50,7 +50,47 @@ print_warning() {
 }
 
 print_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
+    if [ "$SILENT_MODE" != "true" ]; then
+        echo -e "${BLUE}ℹ️  $1${NC}"
+    fi
+    log_message "INFO" "$1"
+}
+
+log_message() {
+    local level="$1"
+    local message="$2"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $message" >> "$INSTALL_DIR/logs/installation.log" 2>/dev/null || true
+}
+
+show_progress() {
+    local current="$1"
+    local total="$2"
+    local message="$3"
+    local percentage=$((current * 100 / total))
+
+    if [ -n "$PROGRESS_CALLBACK" ]; then
+        "$PROGRESS_CALLBACK" "$percentage" "$message" 2>/dev/null || true
+    fi
+
+    if [ "$SILENT_MODE" != "true" ]; then
+        local bar_length=50
+        local filled_length=$((percentage * bar_length / 100))
+        local bar=""
+
+        for ((i=0; i<filled_length; i++)); do
+            bar+="="
+        done
+        for ((i=filled_length; i<bar_length; i++)); do
+            bar+=" "
+        done
+
+        printf "\r${BLUE}[${bar}] ${percentage}%% - $message${NC}"
+        if [ "$current" -eq "$total" ]; then
+            echo ""
+        fi
+    fi
+
+    log_message "PROGRESS" "$percentage% - $message"
 }
 
 # Check if running as root (not recommended)
