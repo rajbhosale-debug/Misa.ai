@@ -174,6 +174,47 @@ pub struct DiscoverySession {
     pub started_at: chrono::DateTime<chrono::Utc>,
     pub qr_token: String,
     pub pairing_status: PairingStatus,
+    pub auto_pair_enabled: bool,
+    pub connection_strength: f32,
+}
+
+/// Device history for smart suggestions
+#[derive(Debug, Clone)]
+pub struct DeviceHistory {
+    pub device_id: String,
+    pub last_connected: chrono::DateTime<chrono::Utc>,
+    pub connection_count: u32,
+    pub average_signal_strength: f32,
+    pub success_rate: f32,
+    pub preferred_for_tasks: Vec<String>,
+    pub device_type: DeviceType,
+}
+
+/// Connection quality monitor
+#[derive(Debug, Clone)]
+pub struct ConnectionQualityMonitor {
+    pub active_connections: Arc<RwLock<HashMap<String, ConnectionQuality>>>,
+    pub quality_history: Arc<RwLock<Vec<QualityMeasurement>>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectionQuality {
+    pub device_id: String,
+    pub latency_ms: u64,
+    pub bandwidth_mbps: f32,
+    pub signal_strength: f32,
+    pub stability_score: f32,
+    pub last_updated: chrono::DateTime<chrono::Utc>,
+    pub uptime_percentage: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct QualityMeasurement {
+    pub device_id: String,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub latency_ms: u64,
+    pub packet_loss: f32,
+    pub jitter_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
