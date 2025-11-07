@@ -522,7 +522,7 @@ download_distribution_silent() {
 
 # Create configuration file
 create_config() {
-    print_info "Creating configuration..."
+    show_progress 6 15 "Creating configuration..."
 
     if [ ! -f "$INSTALL_DIR/config/default.toml" ]; then
         cat > "$INSTALL_DIR/config/default.toml" << 'EOF'
@@ -539,12 +539,13 @@ bind_address = "0.0.0.0"
 default_model = "mixtral"
 local_server_url = "http://ollama:11434"
 switching_preferences.prefer_local = true
-auto_download_models = false
+auto_download_models = true
 
 [devices]
 discovery_enabled = true
 remote_desktop_enabled = true
-max_devices = 5
+max_devices = 10
+auto_pairing = true
 
 [security]
 auth_required = true
@@ -567,11 +568,17 @@ local_only_processing = true
 theme = "auto"
 avatar_enabled = true
 voice_wake_word = "hey misa"
+express_setup_completed = false
 EOF
         print_success "Configuration file created"
     else
         print_info "Configuration file already exists"
     fi
+
+    # Update installation state
+    echo '{"status":"in_progress","step":"config_created","timestamp":"'$(date -Iseconds)'"}' > "$INSTALL_DIR/.install-state"
+
+    show_progress 7 15 "Configuration created"
 }
 
 # Create Docker Compose file for user installation
