@@ -380,31 +380,67 @@
     <WixVariable Id="WixUIBannerBmp" Value="$(var.SourceDir)\resources\banner.bmp" />
     <WixVariable Id="WixUIDialogBmp" Value="$(var.SourceDir)\resources\dialog.bmp" />
 
-    <!-- Custom Actions -->
+    <!-- Enhanced Custom Actions for Express Install -->
     <Binary Id="CustomActionsDLL" SourceFile="$(var.SourceDir)\CustomActions.dll" />
 
+    <!-- Prerequisite Validation -->
     <CustomAction Id="ValidatePrerequisites"
                  BinaryKey="CustomActionsDLL"
                  DllEntry="ValidatePrerequisites"
                  Execute="immediate" />
 
+    <!-- Firewall Configuration -->
     <CustomAction Id="ConfigureFirewall"
                  BinaryKey="CustomActionsDLL"
                  DllEntry="ConfigureFirewall"
                  Execute="deferred"
                  Impersonate="no" />
 
+    <!-- Service Registration -->
     <CustomAction Id="RegisterService"
                  BinaryKey="CustomActionsDLL"
                  DllEntry="RegisterService"
                  Execute="deferred"
                  Impersonate="no" />
 
-    <!-- Installation Sequence -->
+    <!-- System Tray Integration -->
+    <CustomAction Id="SetupSystemTray"
+                 BinaryKey="CustomActionsDLL"
+                 DllEntry="SetupSystemTray"
+                 Execute="deferred"
+                 Impersonate="no" />
+
+    <!-- Auto-start Configuration -->
+    <CustomAction Id="ConfigureAutoStart"
+                 BinaryKey="CustomActionsDLL"
+                 DllEntry="ConfigureAutoStart"
+                 Execute="deferred"
+                 Impersonate="no" />
+
+    <!-- Express Setup Completion -->
+    <CustomAction Id="CompleteExpressSetup"
+                 BinaryKey="CustomActionsDLL"
+                 DllEntry="CompleteExpressSetup"
+                 Execute="deferred"
+                 Impersonate="no" />
+
+    <!-- Post-installation Launch -->
+    <CustomAction Id="LaunchApplication"
+                 BinaryKey="CustomActionsDLL"
+                 DllEntry="LaunchApplication"
+                 Execute="commit"
+                 Impersonate="yes"
+                 Return="asyncNoWait" />
+
+    <!-- Enhanced Installation Sequence -->
     <InstallExecuteSequence>
       <Custom Action="ValidatePrerequisites" Before="LaunchConditions" />
       <Custom Action="ConfigureFirewall" After="InstallFiles">NOT REMOVE</Custom>
       <Custom Action="RegisterService" After="ConfigureFirewall">&amp;ServiceFeature=3</Custom>
+      <Custom Action="SetupSystemTray" After="RegisterService">&amp;SystemTrayIntegration=3</Custom>
+      <Custom Action="ConfigureAutoStart" After="SetupSystemTray">&amp;AutoStartFeature=3</Custom>
+      <Custom Action="CompleteExpressSetup" After="ConfigureAutoStart">&amp;EXPRESS_INSTALL=1</Custom>
+      <Custom Action="LaunchApplication" After="InstallFinalize">&amp;EXPRESS_INSTALL=1</Custom>
     </InstallExecuteSequence>
 
   </Product>
