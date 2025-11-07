@@ -723,12 +723,30 @@ EOF
 
 # Pull Docker images
 pull_images() {
-    print_info "Pulling Docker images (this may take a few minutes)..."
+    show_progress 12 15 "Pulling Docker images (this may take a few minutes)..."
 
     cd "$INSTALL_DIR"
     docker-compose pull
 
-    print_success "Docker images pulled"
+    show_progress 15 15 "Docker images pulled"
+}
+
+# Silent version of pull_images
+pull_images_silent() {
+    show_progress 12 15 "Pulling Docker images..."
+
+    cd "$INSTALL_DIR"
+    if docker-compose pull -q 2>&1 | while read -r line; do
+        if [[ $line =~ ([0-9]+)% ]]; then
+            local progress="${BASH_REMATCH[1]}"
+            show_progress $((12 + progress / 33)) 15 "Pulling Docker images ($progress%)"
+        fi
+    done; then
+        show_progress 15 15 "Docker images pulled"
+    else
+        log_message "ERROR" "Failed to pull Docker images"
+        return 1
+    fi
 }
 
 # Start services
