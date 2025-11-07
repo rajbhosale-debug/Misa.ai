@@ -153,12 +153,17 @@ pub struct WebRTCConnection {
     pub audio_channels: Vec<String>,
 }
 
-/// Discovery service for device finding
+/// Enhanced Discovery service for device finding
 pub struct DiscoveryService {
     enabled: bool,
     discovery_port: u16,
     broadcast_interval_seconds: u64,
     active_discovery: Arc<RwLock<HashMap<String, DiscoverySession>>>,
+    background_scanning: bool,
+    smart_suggestions: bool,
+    last_scan: Arc<RwLock<chrono::DateTime<chrono::Utc>>>,
+    device_history: Arc<RwLock<HashMap<String, DeviceHistory>>>,
+    connection_quality_monitor: ConnectionQualityMonitor,
 }
 
 /// Discovery session
