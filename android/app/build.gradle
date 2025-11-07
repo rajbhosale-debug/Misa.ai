@@ -25,6 +25,11 @@ android {
 
         buildConfigField "String", "KERNEL_URL", "\"http://10.0.2.2:8080\""
         buildConfigField "String", "API_VERSION", "\"v1\""
+        buildConfigField "boolean", "BACKGROUND_DISCOVERY_ENABLED", "true"
+        buildConfigField "boolean", "AUTO_DOWNLOAD_MODELS", "true"
+        buildConfigField "boolean", "AUTO_PERMISSION_REQUEST", "true"
+        buildConfigField "boolean", "SYSTEM_TRAY_ENABLED", "true"
+        buildConfigField "String", "DEFAULT_MODEL_URL", "\"https://models.misa.ai/mixtral-4x7b.gguf\""
     }
 
     buildTypes {
