@@ -216,12 +216,16 @@
           <RegistryValue Type="string" Value="&quot;[#MisaAIexe]&quot; &quot;%1&quot;" />
         </RegistryKey>
 
-        <!-- Version information -->
+        <!-- Enhanced version information -->
         <RegistryKey Root="HKLM" Key="Software\MisaAI\MISA.AI">
           <RegistryValue Name="InstallPath" Type="string" Value="[INSTALLFOLDER]" />
           <RegistryValue Name="DataPath" Type="string" Value="[DATADIR]" />
           <RegistryValue Name="Version" Type="string" Value="1.0.0" />
           <RegistryValue Name="InstallDate" Type="string" Value="[Date]" />
+          <RegistryValue Name="ExpressInstall" Type="integer" Value="[EXPRESS_INSTALL]" />
+          <RegistryValue Name="AutoStart" Type="integer" Value="[AUTOSTART]" />
+          <RegistryValue Name="DockerInstalled" Type="integer" Value="[INSTALLDOCKER]" />
+          <RegistryValue Name="OllamaInstalled" Type="integer" Value="[INSTALLOLLAMA]" />
         </RegistryKey>
       </Component>
     </DirectoryRef>
