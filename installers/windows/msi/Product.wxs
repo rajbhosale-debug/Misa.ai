@@ -73,10 +73,13 @@
       </Feature>
     </Feature>
 
-    <!-- Directory Structure -->
+    <!-- Enhanced Directory Structure -->
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFiles64Folder">
-        <Directory Id="INSTALLFOLDER" Name="MISA.AI" />
+        <Directory Id="INSTALLFOLDER" Name="MISA.AI">
+          <Directory Id="BUNDLESDIR" Name="bundles" />
+          <Directory Id="RESOURCESDIR" Name="resources" />
+        </Directory>
       </Directory>
 
       <Directory Id="ProgramDataFolder">
@@ -85,6 +88,7 @@
           <Directory Id="MODELSDIR" Name="models" />
           <Directory Id="LOGSDIR" Name="logs" />
           <Directory Id="TEMPDIR" Name="temp" />
+          <Directory Id="BACKUPSDIR" Name="backups" />
         </Directory>
       </Directory>
 
@@ -92,6 +96,7 @@
         <Directory Id="ApplicationProgramsFolder" Name="MISA.AI"/>
       </Directory>
 
+      <Directory Id="StartupFolder" Name="Startup" />
       <Directory Id="DesktopFolder" Name="Desktop" />
     </Directory>
 
