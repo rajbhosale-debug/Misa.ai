@@ -817,6 +817,11 @@ impl DiscoveryService {
             discovery_port: 8081,
             broadcast_interval_seconds: 30,
             active_discovery: Arc::new(RwLock::new(HashMap::new())),
+            background_scanning: true,
+            smart_suggestions: true,
+            last_scan: Arc::new(RwLock::new(chrono::Utc::now())),
+            device_history: Arc::new(RwLock::new(HashMap::new())),
+            connection_quality_monitor: ConnectionQualityMonitor::new(),
         }
     }
 
