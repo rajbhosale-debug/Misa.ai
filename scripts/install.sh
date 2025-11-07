@@ -802,6 +802,37 @@ wait_for_services() {
     done
 }
 
+# Silent version of wait_for_services
+wait_for_services_silent() {
+    show_progress 16 15 "Waiting for services to be ready..."
+
+    # Wait for kernel
+    for i in {1..30}; do
+        if curl -s http://localhost:$KERNEL_PORT/health >/dev/null 2>&1; then
+            log_message "INFO" "Kernel is ready"
+            break
+        fi
+        if [ $i -eq 30 ]; then
+            log_message "WARNING" "Kernel is taking longer to start..."
+        fi
+        sleep 2
+    done
+
+    # Wait for web app
+    for i in {1..30}; do
+        if curl -s http://localhost:$WEB_PORT >/dev/null 2>&1; then
+            log_message "INFO" "Web application is ready"
+            break
+        fi
+        if [ $i -eq 30 ]; then
+            log_message "WARNING" "Web application is taking longer to start..."
+        fi
+        sleep 2
+    done
+
+    show_progress 17 15 "Services ready"
+}
+
 # Download default AI model
 download_model() {
     print_info "Downloading default AI model (Mixtral)..."
