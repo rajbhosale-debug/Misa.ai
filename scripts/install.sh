@@ -583,7 +583,7 @@ EOF
 
 # Create Docker Compose file for user installation
 create_docker_compose() {
-    print_info "Creating Docker Compose configuration..."
+    show_progress 8 15 "Creating Docker Compose configuration..."
 
     cat > "$INSTALL_DIR/docker-compose.yml" << 'EOF'
 version: '3.8'
@@ -674,7 +674,7 @@ networks:
     name: misa-ai-network
 EOF
 
-    print_success "Docker Compose configuration created"
+    show_progress 9 15 "Docker Compose configuration created"
 }
 
 # Create environment file
