@@ -439,7 +439,7 @@ check_prerequisites_silent() {
 
 # Download MISA.AI distribution
 download_distribution() {
-    print_info "Downloading MISA.AI distribution..."
+    show_progress 3 15 "Downloading MISA.AI distribution..."
 
     # Check if we're in a git repository (development mode)
     if [ -d ".git" ] && [ -f "docker-compose.yml" ]; then
@@ -471,7 +471,53 @@ download_distribution() {
         fi
     fi
 
-    print_success "Distribution downloaded and extracted"
+    show_progress 5 15 "Distribution downloaded and extracted"
+}
+
+# Silent version of download_distribution
+download_distribution_silent() {
+    show_progress 3 15 "Downloading distribution..."
+
+    # Check if we're in a git repository (development mode)
+    if [ -d ".git" ] && [ -f "docker-compose.yml" ]; then
+        log_message "INFO" "Installing from current directory (development mode)"
+        cp -r infrastructure/docker/docker-compose.yml "$INSTALL_DIR/" 2>/dev/null || true
+        cp -r config "$INSTALL_DIR/" 2>/dev/null || true
+    else
+        # Download from GitHub releases with progress
+        LATEST_RELEASE=$(curl -s https://api.github.com/repos/misa-ai/misa.ai/releases/latest | grep tag_name | cut -d '"' -f 4)
+
+        if [ -z "$LATEST_RELEASE" ]; then
+            log_message "WARNING" "Could not fetch latest release. Using development mode."
+            if [ -f "infrastructure/docker/docker-compose.yml" ]; then
+                cp -r infrastructure/docker/docker-compose.yml "$INSTALL_DIR/" 2>/dev/null || true
+            else
+                log_message "ERROR" "No distribution found. Please ensure you're in the MISA.AI repository."
+                return 1
+            fi
+        else
+            DOWNLOAD_URL="https://github.com/misa-ai/misa.ai/releases/download/$LATEST_RELEASE/misa-ai-$PLATFORM-$ARCH.tar.gz"
+            log_message "INFO" "Downloading from: $DOWNLOAD_URL"
+
+            cd /tmp
+            if curl -L --progress-bar -o misa-ai.tar.gz "$DOWNLOAD_URL" 2>&1 | while read -r line; do
+                if [[ $line =~ ([0-9]+)% ]]; then
+                    local progress="${BASH_REMATCH[1]}"
+                    show_progress $((3 + progress / 25)) 15 "Downloading distribution ($progress%)"
+                fi
+            done; then
+                tar -xzf misa-ai.tar.gz
+                cp -r misa-ai/* "$INSTALL_DIR/" 2>/dev/null || true
+                rm -rf misa-ai.tar.gz misa-ai
+                cd - >/dev/null
+            else
+                log_message "ERROR" "Failed to download distribution"
+                return 1
+            fi
+        fi
+    fi
+
+    show_progress 5 15 "Distribution downloaded"
 }
 
 # Create configuration file
