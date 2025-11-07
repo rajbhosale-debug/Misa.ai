@@ -16,6 +16,17 @@
 
     <MediaTemplate EmbedCab="yes" />
 
+    <!-- Enhanced UI for Express Install -->
+    <UIRef Id="WixUI_ExpressInstall" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+
+    <!-- Express Install Properties -->
+    <Property Id="EXPRESS_INSTALL" Value="1" />
+    <Property Id="INSTALLDESKTOPSHORTCUT" Secure="yes" Value="1" />
+    <Property Id="AUTOSTART" Secure="yes" Value="1" />
+    <Property Id="INSTALLOLLAMA" Secure="yes" Value="1" />
+    <Property Id="INSTALLDOCKER" Secure="yes" Value="1" />
+
     <!-- Upgrade Strategy -->
     <MajorUpgrade DowngradeErrorMessage="A newer version of MISA.AI is already installed." />
     <MinorUpgrade Schedule="afterInstallInitialize" />
